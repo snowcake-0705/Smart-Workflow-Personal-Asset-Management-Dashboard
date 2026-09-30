@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個人生活與專案管理工作台 | 核心引擎</title>
+  <style>
+    /* =========================================================================
+     * UI 優化：現代極簡乾淨排版 (Clean CS Aesthetics)
+     * ========================================================================= */
+    :root {
+      --primary: #1e293b;
+      --primary-accent: #334155;
+      --brand: #2563eb;
+      --brand-hover: #1d4ed8;
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --text: #212529;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --income: #059669;
+      --expense: #dc2626;
+      --warning: #d97706;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 24px 16px; display: flex; justify-content: center; }
+    .app-container { width: 100%; max-width: 900px; }
+
+    /* 頂部狀態卡片 */
+    .dashboard-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.04); padding: 18px 22px; margin-bottom: 16px; }
+    .header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .header-title h2 { font-size: 1.35rem; color: var(--primary); font-weight: 700; }
+    .header-title p { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
+    .system-status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; background: #f1f5f9; border: 1px solid var(--border-dark); border-radius: 6px; font-size: 0.78rem; font-family: ui-monospace, monospace; }
+    .pulse-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 0 2px rgba(16,185,129,0.2); transition: background 0.3s; }
+
+    /* 導航分頁 Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+    .tab-btn { flex: 1; padding: 12px; background: none; border: none; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: 0.15s; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab-btn.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+    /* 內容卡片 */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+    /* 統計儀表板看板 */
+    .stat-metric { text-align: center; padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border); }
+    .stat-metric-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .stat-metric-val { font-size: 1.35rem; font-weight: 700; margin-top: 4px; font-family: ui-monospace, monospace; }
+
+    /* 視覺化四分位進度條 */
+    .section-subtitle { font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .range-bar { width: 100%; height: 22px; background: #e2e8f0; border-radius: 11px; overflow: hidden; display: flex; border: 1px solid var(--border); margin: 8px 0; }
+    .range-slice { height: 100%; transition: width 0.3s; }
+    .slice-q1 { background: #93c5fd; }
+    .slice-iqr { background: #3b82f6; }
+    .slice-fence { background: #fed7aa; }
+    .slice-outlier { background: #fca5a5; }
+
+    .legend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 0.76rem; color: var(--text-muted); margin-top: 8px; }
+    .legend-cell { display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); }
+    .color-block { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* 支付方式佔比進度條 */
+    .payment-bar { width: 100%; height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; display: flex; margin-top: 6px; }
+    .payment-slice { height: 100%; }
+    .payment-tags { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.75rem; margin-top: 8px; color: var(--text-muted); }
+
+    /* 表單佈局 */
+    form { display: grid; gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 0.8rem; font-weight: 600; color: #334155; }
+    input, select, textarea { padding: 8px 10px; border: 1px solid var(--border-dark); border-radius: 6px; font-size: 0.9rem; background: #fff; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+    
+    .btn-row { display: flex; gap: 8px; margin-top: 4px; }
+    button.btn { padding: 9px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; transition: 0.15s; }
+    .btn-primary { background: var(--brand); color: #fff; flex: 1; }
+    .btn-primary:hover { background: var(--brand-hover); }
+    .btn-neutral { background: #e2e8f0; color: var(--text); }
+    .btn-neutral:hover { background: #cbd5e1; }
+    .btn-tool { background: var(--primary); color: #fff; }
+    .btn-tool:hover { background: var(--primary-accent); }
+    .btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .btn-warning:hover { background: #fde68a; }
+
+    /* 搜尋與過濾 */
+    .filter-wrap { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+    .filter-wrap input, .filter-wrap select { font-size: 0.85rem; padding: 6px 10px; }
+
+    /* 清單列表 */
+    .records-list { display: flex; flex-direction: column; gap: 8px; }
+    .record-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; transition: border-color 0.15s; }
+    .record-item:hover { border-color: var(--border-dark); }
+    .record-content { flex: 1; min-width: 0; margin-right: 12px; }
+    .record-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+    .record-title { font-weight: 600; font-size: 0.95rem; }
+    .record-sub { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    
+    /* 標籤 Badge */
+    .tag { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; border: 1px solid transparent; }
+    .tag-cat { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
+    .tag-pay { background: #f8fafc; color: #475569; border-color: var(--border); font-family: ui-monospace, monospace; }
+    .tag-alert { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .tag-high { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+    .tag-mid { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .tag-low { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+    .item-controls { display: flex; gap: 6px; }
+    .btn-act { background: #f8fafc; border: 1px solid var(--border-dark); padding: 5px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; color: #334155; }
+    .btn-act:hover { background: #e2e8f0; }
+    .btn-act.danger { color: #dc2626; border-color: #fecaca; }
+    .btn-act.danger:hover { background: #fef2f2; }
+
+    /* 備份與還原管理卡片 */
+    .backup-panel { background: #ffffff; border: 1px solid var(--border-dark); border-radius: var(--radius); padding: 18px 22px; margin-top: 24px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+    .backup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .backup-header h3 { font-size: 0.95rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .backup-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .import-options { display: flex; align-items: center; gap: 12px; font-size: 0.8rem; color: #334155; margin-right: 6px; }
+    .import-options label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+
+    /* 互動訊息列 */
+    .toast-msg { display: none; padding: 10px 14px; border-radius: 6px; font-size: 0.82rem; margin-bottom: 14px; font-weight: 500; animation: fadeIn 0.2s ease-in-out; }
+    .toast-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .toast-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .toast-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+    .empty-state { text-align: center; padding: 28px; color: var(--text-muted); font-size: 0.85rem; border: 1px dashed var(--border); border-radius: 6px; }
+    .hidden { display: none !important; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <!-- 頂部資訊看板：致理科技大學 商務科技應用系架構 -->
+  <div class="dashboard-card">
+    <div class="header-row">
+      <div class="header-title">
+        <h2>📊 智慧型資產與專案管理工作台</h2>
+        <p>研發架構：致理科技大學 商務科技應用系 · IndexedDB (WorkflowDB) · IQR Model · Greedy Algorithm</p>
+      </div>
+      <div class="system-status-pill">
+        <span class="pulse-dot" id="statusDot"></span>
+        <span id="db-status" style="color: #059669; font-weight: bold;">資料庫連結中...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 系統操作回饋 Toast -->
+  <div id="toastNotification" class="toast-msg"></div>
+
+  <!-- 分頁選單 -->
+  <nav class="tabs">
+    <button class="tab-btn active" id="tabExpBtn" onclick="switchView('exp')">帳務記帳管理</button>
+    <button class="tab-btn" id="tabTaskBtn" onclick="switchView('task')">專案事項排程</button>
+  </nav>
+
+  <!-- ================= 模組一：記帳管理模組 ================= -->
+  <main id="paneExp">
+    <!-- 收支統計指標 -->
+    <div class="card grid-3">
+      <div class="stat-metric">
+        <div class="stat-metric-title">總收入 (Income)</div>
+        <div id="statIncome" class="stat-metric-val" style="color: var(--income);">$0</div>
+      </div>
+      <div class="stat-metric">
+        <div class="stat-metric-title">總支出 (Expense)</div>
+        <div id="statExpense" class="stat-metric-val" style="color: var(--expense);">$0</div>
+      </div>
+      <div class="stat-metric">
+        <div class="stat-metric-title">實質結餘 (Net Balance)</div>
+        <div id="statNet" class="stat-metric-val">$0</div>
+      </div>
+    </div>
+
+    <!-- IQR 支出統計進度條 (與 calculateIQRMetrics 完整對應) -->
+    <div class="card">
+      <div class="section-subtitle">
+        <span>支出區間統計進度條 (IQR Quartile Distribution)</span>
+        <span id="sampleCount" style="font-size: 0.75rem; color: var(--text-muted); font-family: ui-monospace, monospace;">樣本數: 0 筆</span>
+      </div>
+
+      <div class="range-bar">
+        <div class="range-slice slice-q1" id="segQ1" style="width: 25%;" title="常態低標區間 (小額下限)"></div>
+        <div class="range-slice slice-iqr" id="segIQR" style="width: 50%;" title="核心典型區間 (日常主力消費)"></div>
+        <div class="range-slice slice-fence" id="segFence" style="width: 20%;" title="常態高標區間 (大額上限)"></div>
+        <div class="range-slice slice-outlier" id="segOutlier" style="width: 5%;" title="衝動消費預警區 (統計異常門檻)"></div>
+      </div>
+
+      <div class="legend-grid">
+        <div class="legend-cell">
+          <span class="color-block" style="background: #93c5fd;"></span>
+          <span>常態低標 (小額下限): <strong id="lblLowerBound">$0</strong></span>
+        </div>
+        <div class="legend-cell">
+          <span class="color-block" style="background: #3b82f6;"></span>
+          <span>日常中位數 (核心典型): <strong id="lblMedian">$0</strong></span>
+        </div>
+        <div class="legend-cell">
+          <span class="color-block" style="background: #fed7aa;"></span>
+          <span>常態高標 (大額上限): <strong id="lblUpperBound">$0</strong></span>
+        </div>
+        <div class="legend-cell">
+          <span class="color-block" style="background: #fca5a5;"></span>
+          <span>衝動消費預警線: <strong id="lblAlertLine">$0</strong></span>
+        </div>
+      </div>
+
+      <!-- 支付方式佔比進度條 -->
+      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border);">
+        <div style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px;">支付管道支出分佈</div>
+        <div class="payment-bar" id="payBar">
+          <div style="width: 100%; background: #e2e8f0; text-align: center; font-size: 10px; line-height: 12px; color: #94a3b8;">尚無支出數據</div>
+        </div>
+        <div class="payment-tags" id="payTags"></div>
+      </div>
+    </div>
+
+    <!-- 記帳輸入表單 (大項目選單 + 自訂細項) -->
+    <div class="card">
+      <form id="expForm" onsubmit="handleExpenseSubmit(event)">
+        <input type="hidden" id="expId">
+        <div class="grid-3">
+          <div class="field">
+            <label>收支類型</label>
+            <select id="expType" onchange="syncCategories()">
+              <option value="expense">支出 (-)</option>
+              <option value="income">收入 (+)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>金額 (TWD)</label>
+            <input type="number" id="expAmount" min="1" step="1" required placeholder="例如: 150">
+          </div>
+          <div class="field">
+            <label>交易日期</label>
+            <input type="date" id="expDate" required>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label>大分類項目</label>
+            <select id="expCategory" required></select>
+          </div>
+          <div class="field">
+            <label>自訂細項說明</label>
+            <input type="text" id="expItem" required placeholder="例如：午餐便當 / 捷運定期票">
+          </div>
+          <div class="field">
+            <label>付款管道</label>
+            <select id="expPayment">
+              <option value="現金">💵 現金</option>
+              <option value="信用卡">💳 信用卡</option>
+              <option value="簽帳金融卡">💳 簽帳金融卡</option>
+              <option value="LINE Pay">🟢 LINE Pay</option>
+              <option value="街口支付">🔴 街口支付</option>
+              <option value="全支付">🔵 全支付</option>
+              <option value="Apple/Google Pay">📱 Apple/Google Pay</option>
+              <option value="悠遊卡/一卡通">🚌 悠遊卡/一卡通</option>
+              <option value="銀行轉帳">🏦 銀行轉帳</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>備註說明 (選填)</label>
+          <input type="text" id="expDesc" placeholder="發票載具、同行人或補充紀錄...">
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="expSaveBtn">儲存記帳資料</button>
+          <button type="button" class="btn btn-neutral hidden" id="expCancelBtn" onclick="resetExpForm()">取消修改</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 記帳篩選與 CSV 匯出 -->
+    <div class="filter-wrap">
+      <input type="text" id="expSearch" placeholder="搜尋細項或備註..." oninput="renderExpenses()">
+      <select id="expFilterCat" onchange="renderExpenses()">
+        <option value="">全部分類</option>
+      </select>
+      <select id="expFilterPay" onchange="renderExpenses()">
+        <option value="">全部支付管道</option>
+        <option value="現金">現金</option>
+        <option value="信用卡">信用卡</option>
+        <option value="簽帳金融卡">簽帳金融卡</option>
+        <option value="LINE Pay">LINE Pay</option>
+        <option value="街口支付">街口支付</option>
+        <option value="全支付">全支付</option>
+        <option value="Apple/Google Pay">Apple/Google Pay</option>
+        <option value="悠遊卡/一卡通">悠遊卡/一卡通</option>
+        <option value="銀行轉帳">銀行轉帳</option>
+      </select>
+      <button class="btn-act" onclick="exportCsv()">📊 匯出 CSV 報表</button>
+    </div>
+
+    <!-- 記帳清單 -->
+    <div class="records-list" id="expList"></div>
+  </main>
+
+  <!-- ================= 模組二：專案事項排程模組 ================= -->
+  <main id="paneTask" class="hidden">
+    <!-- Gmail 設定與貪婪演算法調度工具 -->
+    <div class="card grid-2">
+      <div>
+        <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted)">GMAIL 預設通知信箱</label>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <input type="email" id="userEmail" placeholder="your_email@gmail.com" style="flex:1;">
+          <button class="btn-act" onclick="saveUserEmail()">儲存信箱</button>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted)">貪婪排程演算法 (依單位時間效益調度)</label>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <input type="number" id="availHours" min="0.5" max="24" step="0.5" value="4" style="width:90px;" placeholder="可用工時">
+          <button class="btn btn-tool" onclick="executeGreedySchedule()" style="flex:1;">執行最佳調度</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 事項輸入表單 -->
+    <div class="card">
+      <form id="taskForm" onsubmit="handleTaskSubmit(event)">
+        <input type="hidden" id="taskId">
+        <div class="grid-2">
+          <div class="field">
+            <label>事項標題</label>
+            <input type="text" id="taskTitle" required placeholder="例如：整理系統架構與測試案例">
+          </div>
+          <div class="field">
+            <label>預計耗時 (小時)</label>
+            <input type="number" id="taskHours" min="0.5" max="40" step="0.5" value="1.5" required>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label>優先級 (權重)</label>
+            <select id="taskPriority">
+              <option value="高">🔴 高優先 (權重: 3)</option>
+              <option value="中" selected>🟡 中優先 (權重: 2)</option>
+              <option value="低">🟢 低優先 (權重: 1)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>分類標籤</label>
+            <input type="text" id="taskTag" placeholder="例如：課業 / 研究 / 日常">
+          </div>
+          <div class="field">
+            <label>截止時間</label>
+            <input type="datetime-local" id="taskDeadline">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>詳細備忘說明</label>
+          <textarea id="taskDesc" rows="2" placeholder="詳細步驟、待辦重點或參考連結..."></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="taskSaveBtn">儲存事項</button>
+          <button type="button" class="btn btn-neutral hidden" id="taskCancelBtn" onclick="resetTaskForm()">取消修改</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 事項過濾與展示 -->
+    <div class="filter-wrap">
+      <input type="text" id="taskSearch" placeholder="搜尋事項標題..." oninput="renderTasks()">
+      <select id="taskFilterStatus" onchange="renderTasks()">
+        <option value="">全部狀態</option>
+        <option value="pending">未完成</option>
+        <option value="completed">已完成</option>
+      </select>
+      <select id="taskFilterPriority" onchange="renderTasks()">
+        <option value="">全部優先級</option>
+        <option value="高">高優先</option>
+        <option value="中">中優先</option>
+        <option value="低">低優先</option>
+      </select>
+    </div>
+
+    <!-- 事項清單 -->
+    <div class="records-list" id="taskList"></div>
+  </main>
+
+  <!-- ================= 模組三：資料備份、匯出與匯入還原專區 ================= -->
+  <section class="backup-panel">
+    <div class="backup-header">
+      <h3>💾 資料備份、匯入與還原中心 (Data Recovery & Backup)</h3>
+      <span style="font-size: 0.75rem; color: var(--text-muted); font-family: ui-monospace, monospace;">WorkflowDB 格式檢定保證</span>
+    </div>
+
+    <div class="backup-controls">
+      <!-- 匯入模式選擇 -->
+      <div class="import-options">
+        <span style="font-weight: 600;">匯入模式：</span>
+        <label>
+          <input type="radio" name="importMode" value="merge" checked>
+          <span>累加合併 (保留舊資料)</span>
+        </label>
+        <label>
+          <input type="radio" name="importMode" value="replace">
+          <span>完整覆蓋 (清空舊資料)</span>
+        </label>
+      </div>
+
+      <!-- 匯出 JSON -->
+      <button class="btn btn-tool" onclick="exportDatabaseJson()">
+        📥 匯出 JSON 備份檔
+      </button>
+
+      <!-- 匯入按鈕與隱藏式檔案輸入 -->
+      <button class="btn btn-neutral" onclick="triggerImportFileInput()">
+        📤 匯入 JSON 備份檔
+      </button>
+      <input type="file" id="jsonFileInput" accept=".json,application/json" style="display:none" onchange="handleFileSelected(event)">
+
+      <!-- 重設初始資料 -->
+      <button class="btn btn-warning" onclick="resetToInitialSeedData()">
+        🔄 重置為預設範例資料
+      </button>
+    </div>
+  </section>
+</div>
+
+<script>
+/**
+ * =========================================================================
+ * 🧠 智慧型管理核心引擎 (Core Engine)
+ * 研發人：致理科技大學 商務科技應用系
+ * 技術棧：IndexedDB (Async NoSQL) · IQR Statistical Model · Greedy Algorithm
+ * =========================================================================
+ */
+
+// -------------------------------------------------------------------------
+// 1. DATA INFRASTRUCTURE: IndexedDB 異步非關聯式資料庫引擎 (WorkflowDB)
+// -------------------------------------------------------------------------
+const DB_NAME = 'WorkflowDB';
+const DB_VERSION = 1;
+let db;
+
+function initDatabase() {
+  const start = performance.now();
+  const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+  request.onerror = (event) => {
+    console.error("IndexedDB 初始化失敗:", event.target.error);
+    const statusEl = document.getElementById('db-status');
+    statusEl.innerText = "資料庫異常";
+    statusEl.style.color = "#dc2626";
+    document.getElementById('statusDot').style.background = "#dc2626";
+    showToast('資料庫初始化異常，請確認瀏覽器支援 IndexedDB', 'error');
+  };
+
+  request.onsuccess = (event) => {
+    db = event.target.result;
+    const latency = (performance.now() - start).toFixed(1);
+    console.log("▲ [Data Storage] IndexedDB 連線成功，交易事務事務鎖就緒。");
+    const statusEl = document.getElementById('db-status');
+    statusEl.innerText = `安全本地資料庫 (NoSQL) 就緒 (${latency} ms)`;
+    statusEl.style.color = "#059669";
+    document.getElementById('statusDot').style.background = "#10b981";
+    
+    // 初始化載入並預填初始測試種子資料
+    seedInitialDataIfEmpty().then(() => {
+      loadExpenses();
+      loadTasks();
+    });
+  };
+
+  request.onupgradeneeded = (event) => {
+    const dbInstance = event.target.result;
+    // 建立記帳資料 Object Store
+    if (!dbInstance.objectStoreNames.contains('accounting')) {
+      dbInstance.createObjectStore('accounting', { keyPath: 'id', autoIncrement: true });
+    }
+    // 建立事項排程 Object Store
+    if (!dbInstance.objectStoreNames.contains('tasks')) {
+      dbInstance.createObjectStore('tasks', { keyPath: 'id', autoIncrement: true });
+    }
+  };
+}
+
+// 通用 IndexedDB 非同步 Promise 封裝
+function dbGetAll(storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbPut(storeName, data) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const req = tx.objectStore(storeName).put(data);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbDelete(storeName, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const req = tx.objectStore(storeName).delete(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbClear(storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const req = tx.objectStore(storeName).clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// -------------------------------------------------------------------------
+// 2. DATA SCIENCE: 四分位距 (IQR Model) 衝動消費異常偵測演算法
+// -------------------------------------------------------------------------
+function calculateIQRMetrics(expenseArray) {
+  if (expenseArray.length < 4) {
+    console.warn("▼ [Analytics] 樣本數不足，無法建構 IQR 統計模型。");
+    return { lowerBound: 0, median: 0, upperBound: 0, alertLine: 0, q1: 0, q3: 0, iqr: 0, count: expenseArray.length, max: expenseArray[0] || 0 };
+  }
+
+  // 將支出陣列進行升序排序 (資工基礎：O(N log N) 排序演算法)
+  const sorted = [...expenseArray].sort((a, b) => a - b);
+  
+  const getPercentile = (data, percentile) => {
+    const index = (data.length - 1) * percentile;
+    const lower = Math.floor(index);
+    const upper = Math.ceil(index);
+    return data[lower] + (data[upper] - data[lower]) * (index - lower);
+  };
+
+  const Q1 = getPercentile(sorted, 0.25);
+  const Q2 = getPercentile(sorted, 0.50); // 中位數
+  const Q3 = getPercentile(sorted, 0.75);
+  const IQR = Q3 - Q1;
+
+  // 計算 IQR 統計指標
+  return {
+    lowerBound: Math.max(0, Q1 - 1.5 * IQR), // 常態低標
+    median: Q2,                              // 核心典型值
+    upperBound: Q3 + 1.5 * IQR,              // 常態高標
+    alertLine: Q3 + 3.0 * IQR,               // 衝動消費預警線 (統計學極端異常值)
+    q1: Q1,
+    q3: Q3,
+    iqr: IQR,
+    count: sorted.length,
+    max: sorted[sorted.length - 1]
+  };
+}
+
+// -------------------------------------------------------------------------
+// 3. ALGORITHM: 最佳化效益排程 (Greedy Algorithm)
+// -------------------------------------------------------------------------
+function computeGreedySchedule(tasks, maxAvailableHours) {
+  console.log("▲ [Algorithm] 啟動貪婪演算法進行任務調度計算...");
+
+  // 貪婪策略：計算「單位時間效益比 = 權重 / 預估耗時」，並降序排序
+  const optimizedTasks = tasks.map(task => ({
+    ...task,
+    efficiency: task.weight / task.hours
+  })).sort((a, b) => b.efficiency - a.efficiency);
+
+  let currentHours = 0;
+  const recommendedSchedule = [];
+
+  // 局部最佳解疊加至全域最佳解
+  for (const task of optimizedTasks) {
+    if (currentHours + task.hours <= maxAvailableHours) {
+      recommendedSchedule.push(task);
+      currentHours += task.hours;
+    }
+  }
+
+  return {
+    schedule: recommendedSchedule,
+    totalHours: currentHours
+  };
+}
+
+// -------------------------------------------------------------------------
+// 4. UI 邏輯、狀態管理與渲染引擎
+// -------------------------------------------------------------------------
+let expenses = [];
+let tasks = [];
+
+const CATEGORIES = {
+  expense: ['飲食日常', '交通出行', '居家生活', '學習進修', '休閒社交', '醫療保健', '其它支出'],
+  income: ['薪資所得', '專案接案', '投資理財', '獎助學金', '其它收入']
+};
+
+const PAY_PALETTE = {
+  '現金': '#10b981',
+  '信用卡': '#3b82f6',
+  '簽帳金融卡': '#0284c7',
+  'LINE Pay': '#22c55e',
+  '街口支付': '#ef4444',
+  '全支付': '#8b5cf6',
+  'Apple/Google Pay': '#475569',
+  '悠遊卡/一卡通': '#f59e0b',
+  '銀行轉帳': '#06b6d4'
+};
+
+function switchView(view) {
+  const isExp = view === 'exp';
+  document.getElementById('paneExp').classList.toggle('hidden', !isExp);
+  document.getElementById('paneTask').classList.toggle('hidden', isExp);
+  document.getElementById('tabExpBtn').classList.toggle('active', isExp);
+  document.getElementById('tabTaskBtn').classList.toggle('active', !isExp);
+}
+
+function syncCategories(selected = '') {
+  const type = document.getElementById('expType').value;
+  const select = document.getElementById('expCategory');
+  select.innerHTML = '';
+  CATEGORIES[type].forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    if (cat === selected) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+function showToast(message, type = 'success') {
+  const t = document.getElementById('toastNotification');
+  t.className = `toast-msg toast-${type}`;
+  t.innerHTML = message;
+  t.style.display = 'block';
+  setTimeout(() => {
+    t.style.display = 'none';
+  }, 4500);
+}
+
+// ---------------- STREAMING_CHUNK:Rendering expenses and analytical charts ----------------
+async function loadExpenses() {
+  expenses = await dbGetAll('accounting');
+  expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+  renderExpenses();
+}
+
+function renderExpenses() {
+  const listEl = document.getElementById('expList');
+  const search = document.getElementById('expSearch').value.toLowerCase();
+  const filterCat = document.getElementById('expFilterCat').value;
+  const filterPay = document.getElementById('expFilterPay').value;
+
+  listEl.innerHTML = '';
+  let inc = 0, exp = 0;
+
+  // 提取支出金額進行 IQR 統計計算
+  const expenseAmounts = expenses
+    .filter(x => x.type === 'expense')
+    .map(x => Number(x.amount));
+
+  const iqrResult = calculateIQRMetrics(expenseAmounts);
+  updateQuartileUI(iqrResult);
+  updatePaymentUI();
+  updateCategoryDropdownFilter();
+
+  expenses.forEach(item => {
+    const amt = Number(item.amount);
+    if (item.type === 'income') inc += amt;
+    else exp += amt;
+
+    const matchesSearch = item.item.toLowerCase().includes(search) || (item.desc && item.desc.toLowerCase().includes(search));
+    const matchesCat = !filterCat || item.category === filterCat;
+    const matchesPay = !filterPay || item.payment === filterPay;
+    if (!matchesSearch || !matchesCat || !matchesPay) return;
+
+    // 依據 calculateIQRMetrics 的 alertLine 判定衝動異常消費
+    const isOutlier = item.type === 'expense' && iqrResult.alertLine > 0 && amt >= iqrResult.alertLine && iqrResult.count >= 4;
+
+    const row = document.createElement('div');
+    row.className = 'record-item';
+    row.innerHTML = `
+      <div class="record-content">
+        <div class="record-top">
+          <span class="tag tag-cat">${escapeHtml(item.category)}</span>
+          <span class="record-title">${escapeHtml(item.item)}</span>
+          <span style="font-weight:700; font-family:ui-monospace, monospace; color:${item.type === 'income' ? 'var(--income)' : 'var(--expense)'}">
+            ${item.type === 'income' ? '+' : '-'}$${amt.toLocaleString()}
+          </span>
+          <span class="tag tag-pay">${escapeHtml(item.payment)}</span>
+          ${isOutlier ? '<span class="tag tag-alert">⚠️ 衝動/大額警示</span>' : ''}
+        </div>
+        <div class="record-sub">
+          <span>📅 ${item.date}</span>
+          ${item.desc ? `<span>📝 ${escapeHtml(item.desc)}</span>` : ''}
+        </div>
+      </div>
+      <div class="item-controls">
+        <button class="btn-act" onclick="editExpense(${item.id})">編輯</button>
+        <button class="btn-act danger" onclick="deleteExpense(${item.id})">刪除</button>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  if (listEl.children.length === 0) {
+    listEl.innerHTML = `<div class="empty-state">目前無符合條件的記帳明細</div>`;
+  }
+
+  document.getElementById('statIncome').textContent = `$${inc.toLocaleString()}`;
+  document.getElementById('statExpense').textContent = `$${exp.toLocaleString()}`;
+  const net = inc - exp;
+  const netEl = document.getElementById('statNet');
+  netEl.textContent = `$${net.toLocaleString()}`;
+  netEl.style.color = net >= 0 ? 'var(--income)' : 'var(--expense)';
+}
+
+function updateQuartileUI(s) {
+  document.getElementById('sampleCount').textContent = `樣本數: ${s.count} 筆支出`;
+  document.getElementById('lblLowerBound').textContent = `$${Math.round(s.lowerBound).toLocaleString()}`;
+  document.getElementById('lblMedian').textContent = `$${Math.round(s.median).toLocaleString()}`;
+  document.getElementById('lblUpperBound').textContent = `$${Math.round(s.upperBound).toLocaleString()}`;
+  document.getElementById('lblAlertLine').textContent = `$${Math.round(s.alertLine).toLocaleString()}`;
+
+  if (s.count < 4 || s.max === 0) {
+    document.getElementById('segQ1').style.width = '25%';
+    document.getElementById('segIQR').style.width = '50%';
+    document.getElementById('segFence').style.width = '20%';
+    document.getElementById('segOutlier').style.width = '5%';
+    return;
+  }
+
+  const baseline = Math.max(s.max, s.alertLine * 1.1, 1);
+  const pQ1 = Math.max(5, (s.q1 / baseline) * 100);
+  const pIQR = Math.max(10, ((s.q3 - s.q1) / baseline) * 100);
+  const pFence = Math.max(5, ((s.alertLine - s.q3) / baseline) * 100);
+  const pOutlier = Math.max(0, 100 - (pQ1 + pIQR + pFence));
+
+  document.getElementById('segQ1').style.width = `${pQ1.toFixed(1)}%`;
+  document.getElementById('segIQR').style.width = `${pIQR.toFixed(1)}%`;
+  document.getElementById('segFence').style.width = `${pFence.toFixed(1)}%`;
+  document.getElementById('segOutlier').style.width = `${pOutlier.toFixed(1)}%`;
+}
+
+function updatePaymentUI() {
+  const totals = {};
+  let totalSpent = 0;
+
+  expenses.filter(x => x.type === 'expense').forEach(e => {
+    const a = Number(e.amount) || 0;
+    totals[e.payment] = (totals[e.payment] || 0) + a;
+    totalSpent += a;
+  });
+
+  const bar = document.getElementById('payBar');
+  const tags = document.getElementById('payTags');
+  bar.innerHTML = '';
+  tags.innerHTML = '';
+
+  if (totalSpent === 0) {
+    bar.innerHTML = `<div style="width: 100%; background: #e2e8f0; text-align: center; font-size: 10px; line-height: 12px; color: #94a3b8;">尚無支出數據</div>`;
+    return;
+  }
+
+  Object.entries(totals).forEach(([channel, amount]) => {
+    const pct = ((amount / totalSpent) * 100);
+    const color = PAY_PALETTE[channel] || '#64748b';
+
+    const slice = document.createElement('div');
+    slice.className = 'payment-slice';
+    slice.style.width = `${pct.toFixed(1)}%`;
+    slice.style.background = color;
+    slice.title = `${channel}: $${amount.toLocaleString()} (${pct.toFixed(1)}%)`;
+    bar.appendChild(slice);
+
+    const tag = document.createElement('div');
+    tag.style.display = 'flex';
+    tag.style.alignItems = 'center';
+    tag.style.gap = '4px';
+    tag.innerHTML = `
+      <span style="width:8px; height:8px; border-radius:2px; background:${color};"></span>
+      <span>${escapeHtml(channel)}: $${amount.toLocaleString()} (${pct.toFixed(1)}%)</span>
+    `;
+    tags.appendChild(tag);
+  });
+}
+
+function updateCategoryDropdownFilter() {
+  const sel = document.getElementById('expFilterCat');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部分類</option>';
+  const cats = [...new Set(expenses.map(x => x.category))];
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    if (c === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+async function handleExpenseSubmit(e) {
+  e.preventDefault();
+  const idVal = document.getElementById('expId').value;
+  const record = {
+    type: document.getElementById('expType').value,
+    amount: Math.abs(Number(document.getElementById('expAmount').value)),
+    date: document.getElementById('expDate').value,
+    category: document.getElementById('expCategory').value,
+    item: document.getElementById('expItem').value.trim(),
+    payment: document.getElementById('expPayment').value,
+    desc: document.getElementById('expDesc').value.trim()
+  };
+
+  if (idVal) {
+    record.id = Number(idVal);
+  }
+
+  await dbPut('accounting', record);
+  resetExpForm();
+  await loadExpenses();
+  showToast(idVal ? '記帳明細已成功更新' : '已成功新增一筆記帳資料', 'success');
+}
+
+function editExpense(id) {
+  const item = expenses.find(x => x.id === id);
+  if (!item) return;
+
+  document.getElementById('expId').value = item.id;
+  document.getElementById('expType').value = item.type;
+  syncCategories(item.category);
+  document.getElementById('expAmount').value = item.amount;
+  document.getElementById('expDate').value = item.date;
+  document.getElementById('expItem').value = item.item;
+  document.getElementById('expPayment').value = item.payment;
+  document.getElementById('expDesc').value = item.desc || '';
+
+  document.getElementById('expSaveBtn').textContent = '更新記帳';
+  document.getElementById('expCancelBtn').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetExpForm() {
+  document.getElementById('expenseForm').reset();
+  document.getElementById('expId').value = '';
+  document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+  syncCategories();
+  document.getElementById('expSaveBtn').textContent = '儲存記帳資料';
+  document.getElementById('expCancelBtn').classList.add('hidden');
+}
+
+async function deleteExpense(id) {
+  if (confirm('確定要刪除這筆記帳紀錄嗎？')) {
+    await dbDelete('accounting', id);
+    await loadExpenses();
+    showToast('已刪除指定記帳明細', 'info');
+  }
+}
+
+function exportCsv() {
+  if (!expenses.length) return alert('目前尚無可匯出的記帳紀錄');
+  const headers = ['編號', '類型', '大分類', '自訂細項', '金額', '付款管道', '交易日期', '備註'];
+  const rows = expenses.map(e => [
+    e.id, e.type === 'income' ? '收入' : '支出', e.category, e.item, e.amount, e.payment, e.date, e.desc || ''
+  ]);
+  const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(f => `"${String(f).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `記帳報表_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast('CSV 報表已匯出', 'success');
+}
+
+// ---------------- STREAMING_CHUNK:Handling task scheduling and operations ----------------
+async function loadTasks() {
+  tasks = await dbGetAll('tasks');
+  renderTasks();
+}
+
+function renderTasks(highlightIds = []) {
+  const listEl = document.getElementById('taskList');
+  const search = document.getElementById('taskSearch').value.toLowerCase();
+  const filterStatus = document.getElementById('taskFilterStatus').value;
+  const filterPrio = document.getElementById('taskFilterPriority').value;
+
+  listEl.innerHTML = '';
+
+  tasks.forEach(item => {
+    if (filterStatus === 'pending' && item.completed) return;
+    if (filterStatus === 'completed' && !item.completed) return;
+    if (filterPrio && item.priority !== filterPrio) return;
+    if (search && !item.title.toLowerCase().includes(search)) return;
+
+    const isRecommended = highlightIds.includes(item.id);
+    const prioClass = item.priority === '高' ? 'tag-high' : item.priority === '中' ? 'tag-mid' : 'tag-low';
+
+    const row = document.createElement('div');
+    row.className = 'record-item';
+    if (isRecommended) {
+      row.style.borderColor = 'var(--brand)';
+      row.style.background = '#f0f7ff';
+    }
+
+    row.innerHTML = `
+      <div class="record-content">
+        <div class="record-top">
+          <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleTaskDone(${item.id})">
+          <span class="tag ${prioClass}">優先級: ${escapeHtml(item.priority)}</span>
+          ${item.tag ? `<span class="tag" style="background:#f1f5f9; color:#475569;">#${escapeHtml(item.tag)}</span>` : ''}
+          <span class="record-title" style="${item.completed ? 'text-decoration:line-through; color:var(--text-muted);' : ''}">
+            ${escapeHtml(item.title)}
+          </span>
+          <span style="font-size:0.75rem; color:#64748b; font-family:ui-monospace, monospace;">(${item.hours || 1}h)</span>
+          ${isRecommended ? '<span class="tag" style="background:var(--brand); color:#fff;">🎯 貪婪排程推薦</span>' : ''}
+        </div>
+        <div class="record-sub">
+          ${item.deadline ? `<span>⏰ 截止: ${item.deadline.replace('T', ' ')}</span>` : ''}
+          ${item.desc ? `<span>📝 ${escapeHtml(item.desc)}</span>` : ''}
+        </div>
+      </div>
+      <div class="item-controls">
+        <button class="btn-act" onclick="sendGmail(${item.id})">📧 Gmail 提醒</button>
+        <button class="btn-act" onclick="editTask(${item.id})">編輯</button>
+        <button class="btn-act danger" onclick="deleteTask(${item.id})">刪除</button>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  if (listEl.children.length === 0) {
+    listEl.innerHTML = `<div class="empty-state">目前尚無待辦事項</div>`;
+  }
+}
+
+async function handleTaskSubmit(e) {
+  e.preventDefault();
+  const idVal = document.getElementById('taskId').value;
+  const p = document.getElementById('taskPriority').value;
+  const weightMap = { '高': 3, '中': 2, '低': 1 };
+
+  const record = {
+    title: document.getElementById('taskTitle').value.trim(),
+    hours: Number(document.getElementById('taskHours').value) || 1,
+    priority: p,
+    weight: weightMap[p] || 1,
+    tag: document.getElementById('taskTag').value.trim(),
+    deadline: document.getElementById('taskDeadline').value,
+    desc: document.getElementById('taskDesc').value.trim(),
+    completed: false
+  };
+
+  if (idVal) {
+    record.id = Number(idVal);
+    const exist = tasks.find(x => x.id === record.id);
+    if (exist) record.completed = exist.completed;
+  }
+
+  await dbPut('tasks', record);
+  resetTaskForm();
+  await loadTasks();
+  showToast(idVal ? '事項已更新' : '已新增事項', 'success');
+}
+
+function editTask(id) {
+  const item = tasks.find(x => x.id === id);
+  if (!item) return;
+
+  document.getElementById('taskId').value = item.id;
+  document.getElementById('taskTitle').value = item.title;
+  document.getElementById('taskHours').value = item.hours || 1;
+  document.getElementById('taskPriority').value = item.priority;
+  document.getElementById('taskTag').value = item.tag || '';
+  document.getElementById('taskDeadline').value = item.deadline || '';
+  document.getElementById('taskDesc').value = item.desc || '';
+
+  document.getElementById('taskSaveBtn').textContent = '更新事項';
+  document.getElementById('taskCancelBtn').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetTaskForm() {
+  document.getElementById('taskForm').reset();
+  document.getElementById('taskId').value = '';
+  document.getElementById('taskSaveBtn').textContent = '儲存事項';
+  document.getElementById('taskCancelBtn').classList.add('hidden');
+}
+
+async function toggleTaskDone(id) {
+  const item = tasks.find(x => x.id === id);
+  if (item) {
+    item.completed = !item.completed;
+    await dbPut('tasks', item);
+    renderTasks();
+  }
+}
+
+async function deleteTask(id) {
+  if (confirm('確定要刪除這筆事項嗎？')) {
+    await dbDelete('tasks', id);
+    await loadTasks();
+    showToast('已刪除指定事項', 'info');
+  }
+}
+
+// 調用核心 computeGreedySchedule 貪婪調度函式
+function executeGreedySchedule() {
+  const maxHours = Number(document.getElementById('availHours').value) || 4;
+  const activeTasks = tasks.filter(t => !t.completed);
+
+  const { schedule, totalHours } = computeGreedySchedule(activeTasks, maxHours);
+  const ids = schedule.map(x => x.id);
+
+  if (!ids.length) {
+    alert('在限制工時內無合適待辦事項可推薦（或事項已全數完成）。');
+    return;
+  }
+
+  renderTasks(ids);
+  showToast(`🎯 貪婪排程完成！已推薦 ${schedule.length} 項任務（累計工時 ${totalHours}h）`, 'success');
+}
+
+function saveUserEmail() {
+  const email = document.getElementById('userEmail').value.trim();
+  localStorage.setItem('user_notification_email', email);
+  showToast('已成功儲存 Gmail 預設通知信箱', 'success');
+}
+
+function sendGmail(id) {
+  const item = tasks.find(x => x.id === id);
+  if (!item) return;
+
+  const to = localStorage.getItem('user_notification_email') || '';
+  const subject = encodeURIComponent(`[工作台提醒] ${item.title}`);
+  const bodyText = `提醒事項通知：\n\n` +
+    `• 事項標題：${item.title}\n` +
+    `• 優先等級：${item.priority} (權重: ${item.weight || 1})\n` +
+    `• 預估工時：${item.hours || 1} 小時\n` +
+    `• 截止時間：${item.deadline ? item.deadline.replace('T', ' ') : '無特定期限'}\n` +
+    `• 備忘備註：\n${item.desc || '無備註'}\n\n` +
+    `---\n個人生活與專案管理工作台發送`;
+
+  const body = encodeURIComponent(bodyText);
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${subject}&body=${body}`, '_blank');
+}
+
+// ---------------- STREAMING_CHUNK:Implementing backup, JSON export and import modules ----------------
+/**
+ * 完整匯出 IndexedDB 的 accounting 與 tasks 成 JSON
+ */
+async function exportDatabaseJson() {
+  try {
+    const accountingData = await dbGetAll('accounting');
+    const tasksData = await dbGetAll('tasks');
+
+    const backupPayload = {
+      meta: {
+        app: 'WorkflowDB Personal Life & Project OS',
+        department: '致理科技大學 商務科技應用系',
+        version: DB_VERSION,
+        exportedAt: new Date().toISOString(),
+        totalExpenses: accountingData.length,
+        totalTasks: tasksData.length
+      },
+      data: {
+        accounting: accountingData,
+        tasks: tasksData
+      }
+    };
+
+    const jsonString = JSON.stringify(backupPayload, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `WorkflowDB_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+
+    showToast(`備份完成！共匯出 ${accountingData.length} 筆記帳、${tasksData.length} 筆事項。`, 'success');
+  } catch (err) {
+    console.error('匯出失敗:', err);
+    showToast('匯出失敗，請檢視 Console 紀錄', 'error');
+  }
+}
+
+/**
+ * 觸發檔案選擇器
+ */
+function triggerImportFileInput() {
+  document.getElementById('jsonFileInput').value = '';
+  document.getElementById('jsonFileInput').click();
+}
+
+/**
+ * 處理選取檔案與格式檢定
+ */
+function handleFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      await processImportData(parsed);
+    } catch (err) {
+      console.error('檔案解析失敗:', err);
+      showToast('匯入失敗：非合法 JSON 格式或檔案已損毀', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/**
+ * 執行資料庫匯入 (支援 replace 與 merge 模式)
+ */
+async function processImportData(jsonObj) {
+  // 結構防呆檢核：相容標準打包結構與直出結構
+  let rawAccounting = [];
+  let rawTasks = [];
+
+  if (jsonObj && jsonObj.data) {
+    rawAccounting = Array.isArray(jsonObj.data.accounting) ? jsonObj.data.accounting : [];
+    rawTasks = Array.isArray(jsonObj.data.tasks) ? jsonObj.data.tasks : [];
+  } else if (jsonObj && (jsonObj.accounting || jsonObj.tasks)) {
+    rawAccounting = Array.isArray(jsonObj.accounting) ? jsonObj.accounting : [];
+    rawTasks = Array.isArray(jsonObj.tasks) ? jsonObj.tasks : [];
+  } else {
+    showToast('匯入失敗：缺少 accounting 或 tasks 資料結構', 'error');
+    return;
+  }
+
+  // 取得選擇的匯入模式
+  const mode = document.querySelector('input[name="importMode"]:checked').value; // 'merge' or 'replace'
+  const confirmMsg = mode === 'replace'
+    ? `⚠️ 注意：您選擇了「完整覆蓋」模式！\n即將清空現有資料，並匯入：\n• 記帳：${rawAccounting.length} 筆\n• 事項：${rawTasks.length} 筆\n\n確定繼續執行嗎？`
+    : `您選擇了「累加合併」模式。\n即將保留現有資料並併入：\n• 記帳：${rawAccounting.length} 筆\n• 事項：${rawTasks.length} 筆\n\n確定繼續執行嗎？`;
+
+  if (!confirm(confirmMsg)) return;
+
+  const start = performance.now();
+
+  try {
+    if (mode === 'replace') {
+      await dbClear('accounting');
+      await dbClear('tasks');
+
+      // 依序寫入新資料 (保留原本 id 或重新自動遞增)
+      for (const item of rawAccounting) {
+        const clean = { ...item };
+        delete clean.id; // 讓 IndexedDB 依序自增防止 key 衝突
+        await dbPut('accounting', clean);
+      }
+      for (const item of rawTasks) {
+        const clean = { ...item };
+        delete clean.id;
+        await dbPut('tasks', clean);
+      }
+    } else {
+      // Merge 模式：一律刪除匯入物件的 id 欄位，自動向後 append
+      for (const item of rawAccounting) {
+        const copy = { ...item };
+        delete copy.id;
+        await dbPut('accounting', copy);
+      }
+      for (const item of rawTasks) {
+        const copy = { ...item };
+        delete copy.id;
+        await dbPut('tasks', copy);
+      }
+    }
+
+    const duration = (performance.now() - start).toFixed(1);
+
+    // 重新載入記憶體與 UI
+    await loadExpenses();
+    await loadTasks();
+
+    const statusEl = document.getElementById('db-status');
+    statusEl.innerText = `資料匯入成功 (${duration} ms)`;
+    statusEl.style.color = '#059669';
+
+    showToast(`✅ 資料還原成功！(${mode === 'replace' ? '覆蓋模式' : '合併模式'}，耗時 ${duration} ms)`, 'success');
+  } catch (err) {
+    console.error('寫入資料庫失敗:', err);
+    showToast('匯入失敗：資料庫寫入發生異常', 'error');
+  }
+}
+
+/**
+ * 重置為官方初始種子範例
+ */
+async function resetToInitialSeedData() {
+  if (!confirm('確定要清除當前資料，並還原成系統預設的範例初始資料嗎？')) return;
+
+  await dbClear('accounting');
+  await dbClear('tasks');
+  await seedInitialData(true);
+  await loadExpenses();
+  await loadTasks();
+
+  showToast('已重置為預設範例資料', 'info');
+}
+
+// ---------------- 初始種子資料 ----------------
+async function seedInitialDataIfEmpty() {
+  const existingExpenses = await dbGetAll('accounting');
+  const existingTasks = await dbGetAll('tasks');
+  if (existingExpenses.length === 0 && existingTasks.length === 0) {
+    await seedInitialData(false);
+  }
+}
+
+async function seedInitialData(notify = false) {
+  const today = new Date().toISOString().split('T')[0];
+  const initialExpenses = [
+    { type: 'expense', amount: 120, date: today, category: '飲食日常', item: '午餐雞腿便當', payment: 'LINE Pay', desc: '校內學生餐廳' },
+    { type: 'expense', amount: 65, date: today, category: '飲食日常', item: '熱拿鐵咖啡', payment: '悠遊卡/一卡通', desc: '圖書館自習' },
+    { type: 'expense', amount: 1280, date: today, category: '交通出行', item: '高鐵定期票續約', payment: '信用卡', desc: '往返學校通勤' },
+    { type: 'expense', amount: 480, date: today, category: '學習進修', item: '演算法實習講義', payment: '現金', desc: '教科書代購' },
+    { type: 'expense', amount: 150, date: today, category: '飲食日常', item: '晚餐牛肉麵', payment: '街口支付', desc: '與同學聚餐' },
+    { type: 'expense', amount: 3200, date: today, category: '休閒社交', item: '週末輕旅行住宿訂金', payment: '簽帳金融卡', desc: '衝動消費測試項' },
+    { type: 'income', amount: 12000, date: today, category: '專案接案', item: '系所網頁維護工讀金', payment: '銀行轉帳', desc: '9月份津貼' }
+  ];
+  for (const exp of initialExpenses) await dbPut('accounting', exp);
+
+  const initialTasks = [
+    { title: '整理專題系統架構與測試案例', hours: 3, priority: '高', weight: 3, tag: '課業', deadline: '', desc: '確認 IndexedDB 與演算法模組整合', completed: false },
+    { title: '閱讀分散式系統論文', hours: 2, priority: '中', weight: 2, tag: '研究', deadline: '', desc: '探討最終一致性與性能指標', completed: false },
+    { title: '更新實驗室進度簡報', hours: 1, priority: '低', weight: 1, tag: '日常', deadline: '', desc: '整理下週排程時程表', completed: false }
+  ];
+  for (const tsk of initialTasks) await dbPut('tasks', tsk);
+
+  if (notify) {
+    console.log("▲ [Data Storage] 預設種子資料初始化完成。");
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[m]);
+}
+
+// ---------------- 系統初始化啟動 ----------------
+window.onload = () => {
+  document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('userEmail').value = localStorage.getItem('user_notification_email') || '';
+  syncCategories();
+  initDatabase();
+};
+</script>
+</body>
+</html>
