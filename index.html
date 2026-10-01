@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧型資產與專案管理工作台 | 核心引擎</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-hover: #172554;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --income: #059669;
+      --expense: #dc2626;
+      --warning: #d97706;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px 16px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 880px; }
+
+    /* Header & CS Profiler Bar */
+    header { background: var(--surface); padding: 16px 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .header-title h2 { font-size: 1.35rem; color: var(--primary); font-weight: 700; }
+    .header-title p { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .system-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 20px; font-size: 0.75rem; color: #0369a1; font-weight: 600; }
+    .pulse-dot { width: 8px; height: 8px; background: #0284c7; border-radius: 50%; }
+
+    /* Tabs */
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+    .tab-btn { flex: 1; padding: 12px; background: none; border: none; font-size: 0.95rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 650px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+    /* Dashboard Metrics */
+    .metric-card { text-align: center; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .metric-title { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+    .metric-val { font-size: 1.25rem; font-weight: 700; margin-top: 4px; }
+
+    /* IQR Progress Bar */
+    .iqr-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; margin-bottom: 16px; }
+    .iqr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; }
+    .iqr-track { display: flex; height: 16px; border-radius: 8px; overflow: hidden; background: #e2e8f0; margin-bottom: 8px; }
+    .iqr-seg { height: 100%; transition: width 0.3s; position: relative; }
+    .seg-low { background: #93c5fd; }
+    .seg-mid { background: #2563eb; }
+    .seg-high { background: #f59e0b; }
+    .seg-outlier { background: #ef4444; }
+    .iqr-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); flex-wrap: wrap; gap: 4px; }
+    .iqr-label-item { display: inline-flex; align-items: center; gap: 4px; }
+    .dot-indicator { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+    /* Forms */
+    form { display: grid; gap: 10px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 0.8rem; font-weight: 600; color: #334155; }
+    input, select, textarea { padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: #fff; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+    
+    .btn-group { display: flex; gap: 8px; margin-top: 6px; }
+    button.btn { padding: 9px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; transition: 0.15s; }
+    .btn-primary { background: var(--primary); color: #fff; flex: 1; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn-opt { background: #0284c7; color: #fff; }
+
+    /* Filter & Search Bar */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-bar input, .filter-bar select { font-size: 0.85rem; padding: 6px 10px; }
+
+    /* List Items */
+    .list-wrapper { display: flex; flex-direction: column; gap: 8px; }
+    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; transition: 0.15s; }
+    .item-row:hover { border-color: #94a3b8; }
+    .item-main { flex: 1; min-width: 0; margin-right: 12px; }
+    .item-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+    .item-title { font-weight: 600; font-size: 0.95rem; color: var(--text); }
+    .item-meta { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; border: 1px solid transparent; }
+    .badge-cat { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .badge-pay { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+    .badge-outlier { background: #fef2f2; color: #b91c1c; border-color: #fecaca; font-weight: 700; }
+    .badge-prio-high { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+    .badge-prio-mid { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .badge-prio-low { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+    .item-actions { display: flex; gap: 6px; }
+    .action-btn { background: #f8fafc; border: 1px solid var(--border); padding: 5px 9px; border-radius: 4px; font-size: 0.78rem; cursor: pointer; color: #334155; }
+    .action-btn:hover { background: #e2e8f0; }
+    .action-btn.del { color: #dc2626; border-color: #fecaca; }
+    .action-btn.del:hover { background: #fef2f2; }
+
+    .empty-state { text-align: center; padding: 36px 16px; color: var(--muted); font-size: 0.9rem; }
+    .backup-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; flex-wrap: wrap; gap: 8px; }
+    .draft-alert { font-size: 0.75rem; color: #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; display: inline-block; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 系統標頭：加入致理科技大學 商務科技應用系 署名與架構資訊 -->
+  <header>
+    <div class="header-top">
+      <div class="header-title">
+        <h2>📊 智慧型資產與專案管理工作台</h2>
+        <p>致理科技大學 商務科技應用系 林義晨 製作</p>
+        <P>研發架構： IndexedDB (WorkflowDB) · IQR Model · Greedy Algorithm</p>
+      </div>
+      <div class="system-pill">
+        <span class="pulse-dot"></span>
+        <span id="db-status">安全本地資料庫 (NoSQL) 就緒</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 雙主模組切換 -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" id="tabExpenseBtn" onclick="switchView('expense')">帳務與金流分析</button>
+    <button class="tab-btn" id="tabTodoBtn" onclick="switchView('todo')">事項排程與調度</button>
+  </nav>
+
+  <!-- ================= 模組一：帳務管理 ================= -->
+  <main id="viewExpense">
+    <!-- 指標看板 -->
+    <div class="card grid-3">
+      <div class="metric-card">
+        <div class="metric-title">總收入 (Income)</div>
+        <div id="statIncome" class="metric-val" style="color: var(--income);">$0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">總支出 (Expense)</div>
+        <div id="statExpense" class="metric-val" style="color: var(--expense);">$0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">實質結餘 (Net Balance)</div>
+        <div id="statNet" class="metric-val">$0</div>
+      </div>
+    </div>
+
+    <!-- IQR 四分位進度條 -->
+    <div class="iqr-box" id="iqrBox">
+      <div class="iqr-header">
+        <span>📈 支出常態區間與衝動消費檢驗 (IQR Model)</span>
+        <span id="iqrSummaryText" style="font-size:0.78rem; font-weight:normal; color:var(--muted);">計算中...</span>
+      </div>
+      <div class="iqr-track">
+        <div id="segLow" class="iqr-seg seg-low" style="width: 25%;" title="常態小額區間"></div>
+        <div id="segMid" class="iqr-seg seg-mid" style="width: 50%;" title="核心典型區間 (IQR)"></div>
+        <div id="segHigh" class="iqr-seg seg-high" style="width: 15%;" title="較大開銷緩衝區"></div>
+        <div id="segOutlier" class="iqr-seg seg-outlier" style="width: 10%;" title="衝動/突發大額區"></div>
+      </div>
+      <div class="iqr-labels">
+        <div class="iqr-label-item"><span class="dot-indicator" style="background:#93c5fd;"></span><span id="lblLow">常態低標: $0</span></div>
+        <div class="iqr-label-item"><span class="dot-indicator" style="background:#2563eb;"></span><span id="lblMed">日常中位數: $0</span></div>
+        <div class="iqr-label-item"><span class="dot-indicator" style="background:#f59e0b;"></span><span id="lblHigh">常態高標: $0</span></div>
+        <div class="iqr-label-item"><span class="dot-indicator" style="background:#ef4444;"></span><span id="lblAlert">衝動消費預警線: $0</span></div>
+      </div>
+    </div>
+
+    <!-- 記帳表單（具備草稿自動恢復） -->
+    <div class="card">
+      <div id="expDraftHint" class="draft-alert hidden">已自動恢復您上次未送出的記帳草稿</div>
+      <form id="expenseForm" onsubmit="handleExpenseSubmit(event)">
+        <input type="hidden" id="expId">
+        <div class="grid-3">
+          <div class="form-group">
+            <label>收支類別</label>
+            <select id="expType" onchange="updateCategoryOptions(); saveDraft('expense');">
+              <option value="expense">支出 (-)</option>
+              <option value="income">收入 (+)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>金額 (TWD)</label>
+            <input type="number" id="expAmount" min="1" step="1" required placeholder="例如: 120" oninput="saveDraft('expense')">
+          </div>
+          <div class="form-group">
+            <label>交易日期</label>
+            <input type="date" id="expDate" required onchange="saveDraft('expense')">
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="form-group">
+            <label>主分類（大項目）</label>
+            <select id="expCategory" required onchange="saveDraft('expense')"></select>
+          </div>
+          <div class="form-group">
+            <label>自訂細項說明</label>
+            <input type="text" id="expItem" required placeholder="如：午餐便當 / 捷運票卡" oninput="saveDraft('expense')">
+          </div>
+          <div class="form-group">
+            <label>支付管道</label>
+            <select id="expPayment" onchange="saveDraft('expense')">
+              <option value="現金">💵 現金</option>
+              <option value="信用卡">💳 信用卡</option>
+              <option value="簽帳金融卡">💳 簽帳金融卡</option>
+              <option value="LINE Pay">🟢 LINE Pay</option>
+              <option value="街口支付">🔴 街口支付</option>
+              <option value="全支付">🔵 全支付</option>
+              <option value="Apple Pay / Google Pay">📱 Apple/Google Pay</option>
+              <option value="悠遊卡 / 一卡通">🚌 交通票證</option>
+              <option value="銀行轉帳">🏦 銀行轉帳</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>備註紀錄 (選填)</label>
+          <input type="text" id="expDesc" placeholder="發票載具或備忘說明..." oninput="saveDraft('expense')">
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary" id="expSubmitBtn">儲存記帳資料</button>
+          <button type="button" class="btn btn-secondary hidden" id="expCancelBtn" onclick="resetExpForm()">取消修改</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 查詢過濾欄 -->
+    <div class="filter-bar">
+      <input type="text" id="expSearch" placeholder="搜尋細項或備註..." oninput="renderExpenses(); saveFilterState();">
+      <select id="expFilterCat" onchange="renderExpenses(); saveFilterState();">
+        <option value="">全部分類</option>
+      </select>
+      <select id="expFilterPay" onchange="renderExpenses(); saveFilterState();">
+        <option value="">全部支付管道</option>
+        <option value="現金">現金</option>
+        <option value="信用卡">信用卡</option>
+        <option value="LINE Pay">LINE Pay</option>
+        <option value="街口支付">街口支付</option>
+        <option value="銀行轉帳">銀行轉帳</option>
+      </select>
+      <button class="action-btn" onclick="exportCsv()">匯出 CSV 報表</button>
+    </div>
+
+    <!-- 清單顯示區 -->
+    <div class="list-wrapper" id="expenseList"></div>
+  </main>
+
+  <!-- ================= 模組二：事項排程 ================= -->
+  <main id="viewTodo" class="hidden">
+    <div class="card grid-2">
+      <div>
+        <label style="font-size:0.8rem; font-weight:600; color:var(--muted)">GMAIL 預設通知信箱</label>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <input type="email" id="defaultEmail" placeholder="your_name@gmail.com">
+          <button class="action-btn" onclick="saveDefaultEmail()">儲存信箱</button>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.8rem; font-weight:600; color:var(--muted)">貪婪調度器（可用工時排程）</label>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <input type="number" id="availableHours" min="0.5" max="24" step="0.5" value="4" placeholder="小時">
+          <button class="btn btn-opt" onclick="runGreedyScheduler()">執行最優調度</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 事項表單（具備草稿自動恢復） -->
+    <div class="card">
+      <div id="todoDraftHint" class="draft-alert hidden">已自動恢復您上次未送出的事項草稿</div>
+      <form id="todoForm" onsubmit="handleTodoSubmit(event)">
+        <input type="hidden" id="todoId">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>事項標題</label>
+            <input type="text" id="todoTitle" required placeholder="如：資管專題期中系統設計" oninput="saveDraft('todo')">
+          </div>
+          <div class="form-group">
+            <label>預計耗時 (小時)</label>
+            <input type="number" id="todoEstHours" min="0.5" max="40" step="0.5" value="1.5" required oninput="saveDraft('todo')">
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="form-group">
+            <label>優先級與價值權重</label>
+            <select id="todoPriority" onchange="saveDraft('todo')">
+              <option value="高">🔴 高優先 (權重: 3)</option>
+              <option value="中" selected>🟡 中優先 (權重: 2)</option>
+              <option value="低">🟢 低優先 (權重: 1)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>分類標籤</label>
+            <input type="text" id="todoTag" placeholder="課業 / 專案 / 生活" oninput="saveDraft('todo')">
+          </div>
+          <div class="form-group">
+            <label>截止 / 提醒時間</label>
+            <input type="datetime-local" id="todoDeadline" onchange="saveDraft('todo')">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>事項細節說明</label>
+          <textarea id="todoDesc" rows="2" placeholder="詳細步驟或備忘..." oninput="saveDraft('todo')"></textarea>
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary" id="todoSubmitBtn">儲存備忘事項</button>
+          <button type="button" class="btn btn-secondary hidden" id="todoCancelBtn" onclick="resetTodoForm()">取消修改</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 事項過濾與清單 -->
+    <div class="filter-bar">
+      <input type="text" id="todoSearch" placeholder="搜尋事項標題..." oninput="renderTodos(); saveFilterState();">
+      <select id="todoFilterStatus" onchange="renderTodos(); saveFilterState();">
+        <option value="">全部狀態</option>
+        <option value="pending">未完成</option>
+        <option value="completed">已完成</option>
+      </select>
+      <select id="todoFilterPrio" onchange="renderTodos(); saveFilterState();">
+        <option value="">全部優先級</option>
+        <option value="高">高優先</option>
+        <option value="中">中優先</option>
+        <option value="低">低優先</option>
+      </select>
+    </div>
+
+    <div class="list-wrapper" id="todoList"></div>
+  </main>
+
+  <!-- 備份與管理區 -->
+  <div class="backup-footer">
+    <div>
+      <button class="action-btn" onclick="exportJsonBackup()">匯出完整資料庫 (JSON)</button>
+      <label class="action-btn" style="cursor:pointer;">
+        匯入備份
+        <input type="file" id="jsonImporter" accept=".json" style="display:none" onchange="importJsonBackup(event)">
+      </label>
+    </div>
+    <span style="color:var(--muted); font-size:0.75rem;">資料採本機非同步 IndexedDB 封閉儲存，重啟不會遺失</span>
+  </div>
+</div>
+
+<script>
+/**
+ * =========================================================================
+ * 🧠 智慧型管理核心引擎 (Core Engine)
+ * 研發人：致理科技大學 商務科技應用系 林義晨
+ * 技術棧：純淨非同步 IndexedDB (WorkflowDB) · IQR Model · Greedy Algorithm
+ * =========================================================================
+ */
+const DB_NAME = 'WorkflowDB';
+const DB_VERSION = 1;
+let dbInstance;
+
+let expenses = [];
+let todos = [];
+
+const CATEGORIES = {
+  expense: ['飲食日常', '交通出行', '居家開銷', '學習成長', '社交娛樂', '醫療保健', '財務支出', '其他支出'],
+  income: ['固定薪資', '專案外快', '兼職收入', '投資股利', '獎學金', '其他收入']
+};
+
+// 1. 初始化資料庫（純淨無污染持久化）
+function initDatabase() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+    req.onerror = (e) => {
+      console.error("IndexedDB 初始化失敗:", e.target.error);
+      document.getElementById('db-status').innerText = "資料庫異常";
+      reject(e.target.error);
+    };
+
+    req.onsuccess = (e) => {
+      dbInstance = e.target.result;
+      document.getElementById('db-status').innerText = "安全本地資料庫 (NoSQL) 就緒";
+      resolve(dbInstance);
+    };
+
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('accounting')) {
+        db.createObjectStore('accounting', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('tasks')) {
+        db.createObjectStore('tasks', { keyPath: 'id' });
+      }
+    };
+  });
+}
+
+// 通用 IndexedDB 操作
+const dbOp = {
+  getAll: (store) => new Promise((resolve, reject) => {
+    const tx = dbInstance.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  }),
+  put: (store, data) => new Promise((resolve, reject) => {
+    const tx = dbInstance.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).put(data);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }),
+  delete: (store, id) => new Promise((resolve, reject) => {
+    const tx = dbInstance.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).delete(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }),
+  clear: (store) => new Promise((resolve, reject) => {
+    const tx = dbInstance.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  })
+};
+
+// 2. 四分位距 (IQR Model) 衝動消費異常偵測演算法
+function calculateIQRMetrics(expenseArray) {
+  if (expenseArray.length < 4) {
+    return { lowerBound: 0, median: 0, upperBound: 0, alertLine: 0 };
+  }
+  const sorted = [...expenseArray].sort((a, b) => a - b);
+  const getPercentile = (data, percentile) => {
+    const index = (data.length - 1) * percentile;
+    const lower = Math.floor(index);
+    const upper = Math.ceil(index);
+    return data[lower] + (data[upper] - data[lower]) * (index - lower);
+  };
+
+  const Q1 = getPercentile(sorted, 0.25);
+  const Q2 = getPercentile(sorted, 0.50);
+  const Q3 = getPercentile(sorted, 0.75);
+  const IQR = Q3 - Q1;
+
+  return {
+    lowerBound: Math.max(0, Q1 - 1.5 * IQR),
+    median: Q2,
+    upperBound: Q3 + 1.5 * IQR,
+    alertLine: Q3 + 3.0 * IQR
+  };
+}
+
+// 3. 貪婪啟發式任務調度
+function computeGreedySchedule(tasks, maxAvailableHours) {
+  const pending = tasks.filter(t => !t.completed);
+  const optimizedTasks = pending.map(task => ({
+    ...task,
+    efficiency: (Number(task.weight) || 1) / (Number(task.hours) || 1)
+  })).sort((a, b) => b.efficiency - a.efficiency);
+
+  let currentHours = 0;
+  const recommendedSchedule = [];
+
+  for (const task of optimizedTasks) {
+    const h = Number(task.hours) || 1;
+    if (currentHours + h <= maxAvailableHours) {
+      recommendedSchedule.push(task);
+      currentHours += h;
+    }
+  }
+  return { schedule: recommendedSchedule, totalHours: currentHours };
+}
+
+// 4. 草稿儲存與狀態復原
+function saveDraft(type) {
+  if (type === 'expense') {
+    if (document.getElementById('expId').value) return;
+    const draft = {
+      type: document.getElementById('expType').value,
+      amount: document.getElementById('expAmount').value,
+      date: document.getElementById('expDate').value,
+      category: document.getElementById('expCategory').value,
+      item: document.getElementById('expItem').value,
+      payment: document.getElementById('expPayment').value,
+      desc: document.getElementById('expDesc').value
+    };
+    localStorage.setItem('draft_expense', JSON.stringify(draft));
+  } else if (type === 'todo') {
+    if (document.getElementById('todoId').value) return;
+    const draft = {
+      title: document.getElementById('todoTitle').value,
+      estHours: document.getElementById('todoEstHours').value,
+      priority: document.getElementById('todoPriority').value,
+      tag: document.getElementById('todoTag').value,
+      deadline: document.getElementById('todoDeadline').value,
+      desc: document.getElementById('todoDesc').value
+    };
+    localStorage.setItem('draft_todo', JSON.stringify(draft));
+  }
+}
+
+function restoreDrafts() {
+  const expDraftStr = localStorage.getItem('draft_expense');
+  if (expDraftStr) {
+    try {
+      const d = JSON.parse(expDraftStr);
+      if (d.amount || d.item || d.desc) {
+        document.getElementById('expType').value = d.type || 'expense';
+        updateCategoryOptions(d.category);
+        document.getElementById('expAmount').value = d.amount || '';
+        if (d.date) document.getElementById('expDate').value = d.date;
+        document.getElementById('expItem').value = d.item || '';
+        document.getElementById('expPayment').value = d.payment || '現金';
+        document.getElementById('expDesc').value = d.desc || '';
+        document.getElementById('expDraftHint').classList.remove('hidden');
+      }
+    } catch(e){}
+  }
+
+  const todoDraftStr = localStorage.getItem('draft_todo');
+  if (todoDraftStr) {
+    try {
+      const d = JSON.parse(todoDraftStr);
+      if (d.title || d.desc) {
+        document.getElementById('todoTitle').value = d.title || '';
+        document.getElementById('todoEstHours').value = d.estHours || '1.5';
+        document.getElementById('todoPriority').value = d.priority || '中';
+        document.getElementById('todoTag').value = d.tag || '';
+        document.getElementById('todoDeadline').value = d.deadline || '';
+        document.getElementById('todoDesc').value = d.desc || '';
+        document.getElementById('todoDraftHint').classList.remove('hidden');
+      }
+    } catch(e){}
+  }
+}
+
+function saveFilterState() {
+  const filters = {
+    expSearch: document.getElementById('expSearch').value,
+    expFilterCat: document.getElementById('expFilterCat').value,
+    expFilterPay: document.getElementById('expFilterPay').value,
+    todoSearch: document.getElementById('todoSearch').value,
+    todoFilterStatus: document.getElementById('todoFilterStatus').value,
+    todoFilterPrio: document.getElementById('todoFilterPrio').value,
+  };
+  localStorage.setItem('app_filters', JSON.stringify(filters));
+}
+
+function restoreFilterState() {
+  const f = JSON.parse(localStorage.getItem('app_filters') || '{}');
+  if (f.expSearch) document.getElementById('expSearch').value = f.expSearch;
+  if (f.expFilterCat) document.getElementById('expFilterCat').value = f.expFilterCat;
+  if (f.expFilterPay) document.getElementById('expFilterPay').value = f.expFilterPay;
+  if (f.todoSearch) document.getElementById('todoSearch').value = f.todoSearch;
+  if (f.todoFilterStatus) document.getElementById('todoFilterStatus').value = f.todoFilterStatus;
+  if (f.todoFilterPrio) document.getElementById('todoFilterPrio').value = f.todoFilterPrio;
+}
+
+// 5. 畫面渲染與切換
+function switchView(view) {
+  const isExp = view === 'expense';
+  document.getElementById('viewExpense').classList.toggle('hidden', !isExp);
+  document.getElementById('viewTodo').classList.toggle('hidden', isExp);
+  document.getElementById('tabExpenseBtn').classList.toggle('active', isExp);
+  document.getElementById('tabTodoBtn').classList.toggle('active', !isExp);
+  localStorage.setItem('active_view', view);
+}
+
+function updateCategoryOptions(selectedVal = '') {
+  const type = document.getElementById('expType').value;
+  const catSelect = document.getElementById('expCategory');
+  catSelect.innerHTML = '';
+  CATEGORIES[type].forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    if (cat === selectedVal) opt.selected = true;
+    catSelect.appendChild(opt);
+  });
+}
+
+async function loadExpenses() {
+  expenses = await dbOp.getAll('accounting');
+  expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+  renderExpenses();
+}
+
+function renderExpenses() {
+  const listEl = document.getElementById('expenseList');
+  const search = document.getElementById('expSearch').value.toLowerCase();
+  const filterCat = document.getElementById('expFilterCat').value;
+  const filterPay = document.getElementById('expFilterPay').value;
+
+  listEl.innerHTML = '';
+  let inc = 0, exp = 0;
+
+  const expenseAmounts = expenses.filter(x => x.type === 'expense').map(x => Number(x.amount));
+  const metrics = calculateIQRMetrics(expenseAmounts);
+
+  updateIQRVisuals(metrics, expenseAmounts.length);
+  populateCategoryFilter();
+
+  let renderedCount = 0;
+
+  expenses.forEach(item => {
+    const amt = Number(item.amount);
+    if (item.type === 'income') inc += amt;
+    else exp += amt;
+
+    const matchesSearch = item.item.toLowerCase().includes(search) || (item.desc && item.desc.toLowerCase().includes(search));
+    const matchesCat = !filterCat || item.category === filterCat;
+    const matchesPay = !filterPay || item.payment === filterPay;
+
+    if (!matchesSearch || !matchesCat || !matchesPay) return;
+    renderedCount++;
+
+    const isOutlier = item.type === 'expense' && metrics.upperBound > 0 && amt >= metrics.upperBound;
+
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <div class="item-main">
+        <div class="item-header">
+          <span class="badge badge-cat">${escapeHtml(item.category)}</span>
+          <span class="item-title">${escapeHtml(item.item)}</span>
+          <span style="font-weight:700; color:${item.type === 'income' ? 'var(--income)' : 'var(--expense)'}">
+            ${item.type === 'income' ? '+' : '-'}$${amt.toLocaleString()}
+          </span>
+          <span class="badge badge-pay">${escapeHtml(item.payment)}</span>
+          ${isOutlier ? '<span class="badge badge-outlier">⚠️ 衝動/大額警示</span>' : ''}
+        </div>
+        <div class="item-meta">
+          <span>📅 ${item.date}</span>
+          ${item.desc ? `<span>💬 ${escapeHtml(item.desc)}</span>` : ''}
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="action-btn" onclick="startEditExpense('${item.id}')">編輯</button>
+        <button class="action-btn del" onclick="deleteExpense('${item.id}')">刪除</button>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  if (renderedCount === 0) {
+    listEl.innerHTML = `<div class="empty-state">尚無記帳紀錄。請從上方表單輸入您的第一筆收支。</div>`;
+  }
+
+  document.getElementById('statIncome').textContent = `$${inc.toLocaleString()}`;
+  document.getElementById('statExpense').textContent = `$${exp.toLocaleString()}`;
+  const net = inc - exp;
+  const netEl = document.getElementById('statNet');
+  netEl.textContent = `$${net.toLocaleString()}`;
+  netEl.style.color = net >= 0 ? 'var(--income)' : 'var(--expense)';
+}
+
+function updateIQRVisuals(m, count) {
+  if (count < 4) {
+    document.getElementById('iqrSummaryText').textContent = `累積樣本不足 (${count}/4 筆)，請多記幾筆支出以啟動常態檢測`;
+    document.getElementById('lblLow').textContent = `常態低標: --`;
+    document.getElementById('lblMed').textContent = `日常中位數: --`;
+    document.getElementById('lblHigh').textContent = `常態高標: --`;
+    document.getElementById('lblAlert').textContent = `衝動消費預警線: --`;
+    return;
+  }
+
+  document.getElementById('iqrSummaryText').textContent = `樣本數: ${count} 筆支出 (正常值上限: $${Math.round(m.upperBound)})`;
+  document.getElementById('lblLow').textContent = `常態低標: $${Math.round(m.lowerBound)}`;
+  document.getElementById('lblMed').textContent = `日常中位數: $${Math.round(m.median)}`;
+  document.getElementById('lblHigh').textContent = `常態高標: $${Math.round(m.upperBound)}`;
+  document.getElementById('lblAlert').textContent = `衝動消費預警線: $${Math.round(m.alertLine)}`;
+}
+
+async function handleExpenseSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('expId').value || 'exp_' + Date.now();
+  const record = {
+    id,
+    type: document.getElementById('expType').value,
+    amount: Math.abs(Number(document.getElementById('expAmount').value)),
+    category: document.getElementById('expCategory').value,
+    item: document.getElementById('expItem').value.trim(),
+    payment: document.getElementById('expPayment').value,
+    date: document.getElementById('expDate').value,
+    desc: document.getElementById('expDesc').value.trim()
+  };
+
+  await dbOp.put('accounting', record);
+  localStorage.removeItem('draft_expense');
+  document.getElementById('expDraftHint').classList.add('hidden');
+  resetExpForm();
+  await loadExpenses();
+}
+
+function startEditExpense(id) {
+  const item = expenses.find(x => x.id === id);
+  if (!item) return;
+
+  document.getElementById('expId').value = item.id;
+  document.getElementById('expType').value = item.type;
+  updateCategoryOptions(item.category);
+  document.getElementById('expAmount').value = item.amount;
+  document.getElementById('expItem').value = item.item;
+  document.getElementById('expPayment').value = item.payment;
+  document.getElementById('expDate').value = item.date;
+  document.getElementById('expDesc').value = item.desc || '';
+
+  document.getElementById('expSubmitBtn').textContent = '更新記帳資料';
+  document.getElementById('expCancelBtn').classList.remove('hidden');
+  document.getElementById('expDraftHint').classList.add('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetExpForm() {
+  document.getElementById('expenseForm').reset();
+  document.getElementById('expId').value = '';
+  document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+  updateCategoryOptions();
+  document.getElementById('expSubmitBtn').textContent = '儲存記帳資料';
+  document.getElementById('expCancelBtn').classList.add('hidden');
+}
+
+async function deleteExpense(id) {
+  if (confirm('確定要刪除這筆記帳紀錄？')) {
+    await dbOp.delete('accounting', id);
+    await loadExpenses();
+  }
+}
+
+function populateCategoryFilter() {
+  const sel = document.getElementById('expFilterCat');
+  const curr = sel.value;
+  sel.innerHTML = '<option value="">全部分類</option>';
+  const cats = [...new Set(expenses.map(x => x.category))];
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    if (c === curr) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// 6. 事項管理邏輯
+async function loadTodos() {
+  todos = await dbOp.getAll('tasks');
+  renderTodos();
+}
+
+function renderTodos(highlightIds = []) {
+  const listEl = document.getElementById('todoList');
+  const search = document.getElementById('todoSearch').value.toLowerCase();
+  const filterStatus = document.getElementById('todoFilterStatus').value;
+  const filterPrio = document.getElementById('todoFilterPrio').value;
+
+  listEl.innerHTML = '';
+  let count = 0;
+
+  todos.forEach(item => {
+    if (filterStatus === 'pending' && item.completed) return;
+    if (filterStatus === 'completed' && !item.completed) return;
+    if (filterPrio && item.priority !== filterPrio) return;
+    if (search && !item.title.toLowerCase().includes(search)) return;
+    count++;
+
+    const isOptimized = highlightIds.includes(item.id);
+    const prioClass = item.priority === '高' ? 'badge-prio-high' : item.priority === '中' ? 'badge-prio-mid' : 'badge-prio-low';
+
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    if (isOptimized) {
+      row.style.borderColor = '#0284c7';
+      row.style.background = '#f0f9ff';
+    }
+
+    row.innerHTML = `
+      <div class="item-main">
+        <div class="item-header">
+          <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleTodoComplete('${item.id}')">
+          <span class="badge ${prioClass}">優先級: ${escapeHtml(item.priority)}</span>
+          ${item.tag ? `<span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(item.tag)}</span>` : ''}
+          <span class="item-title" style="${item.completed ? 'text-decoration:line-through; color:var(--muted);' : ''}">
+            ${escapeHtml(item.title)}
+          </span>
+          <span style="font-size:0.75rem; color:#64748b;">(預估: ${item.hours || 1}h)</span>
+          ${isOptimized ? '<span class="badge" style="background:#0284c7; color:#fff;">🎯 今日推薦排程</span>' : ''}
+        </div>
+        <div class="item-meta">
+          ${item.deadline ? `<span>⏰ 截止: ${item.deadline.replace('T', ' ')}</span>` : ''}
+          ${item.desc ? `<span>📝 ${escapeHtml(item.desc)}</span>` : ''}
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="action-btn" onclick="sendGmailReminder('${item.id}')">📧 Gmail 提醒</button>
+        <button class="action-btn" onclick="startEditTodo('${item.id}')">編輯</button>
+        <button class="action-btn del" onclick="deleteTodo('${item.id}')">刪除</button>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  if (count === 0) {
+    listEl.innerHTML = `<div class="empty-state">尚無備忘事項。請從上方表單建立工作或學習任務。</div>`;
+  }
+}
+
+async function handleTodoSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('todoId').value || 'todo_' + Date.now();
+  const priority = document.getElementById('todoPriority').value;
+  const weightMap = { '高': 3, '中': 2, '低': 1 };
+
+  const record = {
+    id,
+    title: document.getElementById('todoTitle').value.trim(),
+    hours: Number(document.getElementById('todoEstHours').value) || 1,
+    priority,
+    weight: weightMap[priority] || 2,
+    tag: document.getElementById('todoTag').value.trim(),
+    deadline: document.getElementById('todoDeadline').value,
+    desc: document.getElementById('todoDesc').value.trim(),
+    completed: false
+  };
+
+  const existing = todos.find(x => x.id === id);
+  if (existing) record.completed = existing.completed;
+
+  await dbOp.put('tasks', record);
+  localStorage.removeItem('draft_todo');
+  document.getElementById('todoDraftHint').classList.add('hidden');
+  resetTodoForm();
+  await loadTodos();
+}
+
+function startEditTodo(id) {
+  const item = todos.find(x => x.id === id);
+  if (!item) return;
+
+  document.getElementById('todoId').value = item.id;
+  document.getElementById('todoTitle').value = item.title;
+  document.getElementById('todoEstHours').value = item.hours || 1;
+  document.getElementById('todoPriority').value = item.priority;
+  document.getElementById('todoTag').value = item.tag || '';
+  document.getElementById('todoDeadline').value = item.deadline || '';
+  document.getElementById('todoDesc').value = item.desc || '';
+
+  document.getElementById('todoSubmitBtn').textContent = '更新備忘事項';
+  document.getElementById('todoCancelBtn').classList.remove('hidden');
+  document.getElementById('todoDraftHint').classList.add('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetTodoForm() {
+  document.getElementById('todoForm').reset();
+  document.getElementById('todoId').value = '';
+  document.getElementById('todoSubmitBtn').textContent = '儲存備忘事項';
+  document.getElementById('todoCancelBtn').classList.add('hidden');
+}
+
+async function toggleTodoComplete(id) {
+  const item = todos.find(x => x.id === id);
+  if (item) {
+    item.completed = !item.completed;
+    await dbOp.put('tasks', item);
+    renderTodos();
+  }
+}
+
+async function deleteTodo(id) {
+  if (confirm('確定要刪除這筆事項？')) {
+    await dbOp.delete('tasks', id);
+    await loadTodos();
+  }
+}
+
+function saveDefaultEmail() {
+  const email = document.getElementById('defaultEmail').value.trim();
+  localStorage.setItem('sys_user_email', email);
+  alert('Gmail 信箱已儲存！');
+}
+
+function sendGmailReminder(id) {
+  const item = todos.find(x => x.id === id);
+  if (!item) return;
+
+  const to = localStorage.getItem('sys_user_email') || '';
+  const subject = encodeURIComponent(`[待辦提醒] ${item.title}`);
+  const bodyText = `親愛的自己，請留意以下待辦排程：\n\n` +
+    `• 事項：${item.title}\n` +
+    `• 優先級：${item.priority}\n` +
+    `• 預估工時：${item.hours || 1} 小時\n` +
+    `• 截止時間：${item.deadline ? item.deadline.replace('T', ' ') : '無特定期限'}\n` +
+    `• 備忘：\n${item.desc || '無特定細節'}\n\n` +
+    `（來自智慧型資產與專案管理工作台）`;
+
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${subject}&body=${encodeURIComponent(bodyText)}`;
+  window.open(gmailUrl, '_blank');
+}
+
+function runGreedyScheduler() {
+  const hours = Number(document.getElementById('availableHours').value) || 4;
+  const { schedule, totalHours } = computeGreedySchedule(todos, hours);
+  const ids = schedule.map(x => x.id);
+
+  if (!ids.length) {
+    alert('在指定工時限制下，無待辦事項可供推薦（或所有事項皆已完成）。');
+    return;
+  }
+  renderTodos(ids);
+  alert(`🎯 運籌調度完成！已為您挑選 ${totalHours} 小時內效用權重最大的 ${schedule.length} 項任務（已高亮藍框）。`);
+}
+
+// 7. 資料備份與還原
+async function exportJsonBackup() {
+  const data = {
+    version: DB_VERSION,
+    author: "致理科技大學 商務科技應用系 林義晨",
+    exportTime: new Date().toISOString(),
+    accounting: await dbOp.getAll('accounting'),
+    tasks: await dbOp.getAll('tasks')
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `WorkflowDB_備份_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+}
+
+function importJsonBackup(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      if (!Array.isArray(data.accounting) && !Array.isArray(data.tasks)) {
+        throw new Error('格式不符合');
+      }
+      if (confirm('匯入備份將會覆蓋您目前的本地資料，確定要繼續嗎？')) {
+        await dbOp.clear('accounting');
+        await dbOp.clear('tasks');
+
+        for (const item of (data.accounting || [])) await dbOp.put('accounting', item);
+        for (const item of (data.tasks || [])) await dbOp.put('tasks', item);
+
+        await loadExpenses();
+        await loadTodos();
+        alert('資料還原成功！已完整恢復所有資料。');
+      }
+    } catch(err) {
+      alert('匯入失敗：備份檔格式不相符。');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function exportCsv() {
+  if (!expenses.length) return alert('目前尚無記帳資料可匯出！');
+  const headers = ['ID', '類型', '大分類', '細項', '金額', '支付方式', '日期', '備註'];
+  const rows = expenses.map(e => [
+    e.id, e.type === 'income' ? '收入' : '支出', e.category, e.item, e.amount, e.payment, e.date, e.desc || ''
+  ]);
+  const csvContent = '\uFEFF' + [headers, ...rows].map(r => r.map(f => `"${String(f).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `記帳報表_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[m]);
+}
+
+// 8. 系統載入與狀態復原
+window.onload = async () => {
+  document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('defaultEmail').value = localStorage.getItem('sys_user_email') || '';
+  updateCategoryOptions();
+
+  const lastView = localStorage.getItem('active_view') || 'expense';
+  switchView(lastView);
+  restoreFilterState();
+
+  try {
+    await initDatabase();
+    await loadExpenses();
+    await loadTodos();
+    restoreDrafts();
+  } catch (err) {
+    console.error('啟動失敗:', err);
+  }
+};
+</script>
+</body>
+</html>
