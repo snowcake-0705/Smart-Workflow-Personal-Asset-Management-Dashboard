@@ -1,0 +1,62 @@
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; }
+body { background-color: #f4f6f9; color: #333; padding: 20px 10px; display: flex; justify-content: center; }
+.container { width: 100%; max-width: 900px; }
+
+header { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 15px 20px; margin-bottom: 15px; }
+.title-area h2 { font-size: 1.3rem; color: #1a365d; }
+.title-area p { font-size: 0.82rem; color: #666; margin-top: 4px; line-height: 1.4; }
+.db-status { font-size: 0.8rem; color: #2b6cb0; margin-top: 6px; font-weight: bold; }
+
+.tabs { display: flex; border-bottom: 2px solid #cbd5e0; margin-bottom: 15px; }
+.tab-btn { flex: 1; padding: 10px; background: none; border: none; font-size: 0.95rem; font-weight: bold; color: #718096; cursor: pointer; border-bottom: 3px solid transparent; }
+.tab-btn.active { color: #2b6cb0; border-bottom-color: #2b6cb0; }
+
+.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 650px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+.stat-item { text-align: center; padding: 8px; background: #edf2f7; border-radius: 4px; }
+.stat-label { font-size: 0.75rem; color: #4a5568; }
+.stat-num { font-size: 1.2rem; font-weight: bold; margin-top: 3px; }
+
+.iqr-container { background: #f7fafc; border: 1px solid #edf2f7; padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+.iqr-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: #e2e8f0; margin: 8px 0; }
+.bar-seg { height: 100%; transition: width 0.3s; }
+.seg-q1 { background: #90cdf4; }
+.seg-mid { background: #3182ce; }
+.seg-q3 { background: #ed8936; }
+.seg-outlier { background: #e53e3e; }
+.iqr-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #718096; flex-wrap: wrap; gap: 4px; }
+
+.form-group { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+.form-group label { font-size: 0.8rem; font-weight: bold; color: #4a5568; }
+input, select, textarea { padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.9rem; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #3182ce; }
+
+.btn-row { display: flex; gap: 8px; margin-top: 6px; }
+button.btn { padding: 8px 14px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; cursor: pointer; border: none; }
+.btn-primary { background: #2b6cb0; color: #fff; flex: 1; }
+.btn-primary:hover { background: #2c5282; }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-action { background: #319795; color: #fff; }
+
+.benchmark-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.8rem; }
+.benchmark-table th, .benchmark-table td { padding: 5px 8px; border: 1px solid #cbd5e0; text-align: center; }
+.benchmark-table th { background: #edf2f7; color: #2d3748; }
+
+.item-list { display: flex; flex-direction: column; gap: 8px; }
+.list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; }
+.item-info { flex: 1; min-width: 0; margin-right: 10px; }
+.item-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+.tag { padding: 1px 6px; border-radius: 3px; font-size: 0.72rem; font-weight: bold; background: #edf2f7; color: #4a5568; }
+.tag-category { background: #ebf8ff; color: #2b6cb0; }
+.tag-warning { background: #fed7d7; color: #c53030; }
+.tag-prio-high { background: #feebc8; color: #c05621; }
+.tag-dep { background: #e9d8fd; color: #6b46c1; }
+
+.btn-sm { padding: 4px 8px; border: 1px solid #cbd5e0; border-radius: 3px; background: #fff; font-size: 0.75rem; cursor: pointer; }
+.btn-sm.del { color: #e53e3e; border-color: #feb2b2; }
+
+.test-box { background: #2d3748; color: #e2e8f0; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; margin-top: 15px; }
+.hidden { display: none !important; }
