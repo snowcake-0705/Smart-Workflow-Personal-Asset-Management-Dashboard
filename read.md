@@ -58,4 +58,4 @@ my-portfolio-project/
 │   └── style.css       # Layout & Components
 └── js/
     ├── core.js         # Model: IndexedDB、Kahn's Algo、Knapsack DP、Rolling IQR
-    └── app.js          # Controller: 業務流程、事件處理與視圖綁定
+    └── app.js          # Controller: 業務流程、事件處理與視圖綁定 
