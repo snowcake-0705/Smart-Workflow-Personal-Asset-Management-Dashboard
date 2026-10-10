@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edge-Native Resource Optimization Engine | 智慧生活與專案管理工作台</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<div class="container">
+  <!-- 頂部標頭 -->
+  <header>
+    <div class="header-top">
+      <div class="title-area">
+        <h1>智慧生活與專案管理工作台</h1>
+        <div class="subtitle">
+          開發人：致理科技大學 商務科技應用系 林義晨<br>
+          核心架構：DAG 拓撲閉包排程 · IDB 原生索引滾動 IQR · 離散 0/1 背包動態規劃消融實驗
+        </div>
+        <div class="meta-tags">
+          <span class="meta-pill">Edge-Native</span>
+          <span class="meta-pill">Zero-Server</span>
+          <span class="meta-pill">Operations Research</span>
+          <span class="meta-pill">IndexedDB B-Tree</span>
+        </div>
+      </div>
+      <div id="db-msg" class="db-status">
+        <span class="db-dot"></span>
+        <span>資料庫：初始化中...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 頁籤切換 -->
+  <div class="tabs">
+    <button class="tab-btn active" id="btnTabExpense" onclick="changeTab('expense')">帳務記錄與自適應滾動檢定</button>
+    <button class="tab-btn" id="btnTabTask" onclick="changeTab('task')">DAG 相依閉包排程與 DP 求解</button>
+  </div>
+
+  <!-- 分頁 1: 帳務與 IQR 統計 -->
+  <div id="secExpense">
+    <div class="card grid-3">
+      <div class="stat-item">
+        <div class="stat-label">累積收入總額</div>
+        <div id="valIncome" class="stat-num" style="color: var(--success);">$0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">累積支出總額</div>
+        <div id="valExpense" class="stat-num" style="color: var(--danger);">$0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">當期淨收支結餘</div>
+        <div id="valBalance" class="stat-num">$0</div>
+      </div>
+    </div>
+
+    <!-- IQR 分佈條 -->
+    <div class="iqr-container">
+      <div class="iqr-header">
+        <span>非參數支出常態區間檢定 (Stratified IQR Model)</span>
+        <div>
+          <label style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">檢定視窗：</label>
+          <select id="selIqrMode" style="font-size:0.75rem; padding:2px 6px;" onchange="renderExpenses()">
+            <option value="rolling">滾動 30 天自適應分層 (B-Tree 索引)</option>
+            <option value="stratified">歷史全期分層 (All-time Stratified)</option>
+            <option value="global">歷史全域分析 (Global Benchmark)</option>
+          </select>
+        </div>
+      </div>
+      <div class="iqr-bar">
+        <div id="barQ1" class="bar-seg seg-q1" style="width:25%;"></div>
+        <div id="barMid" class="bar-seg seg-mid" style="width:50%;"></div>
+        <div id="barQ3" class="bar-seg seg-q3" style="width:15%;"></div>
+        <div id="barOutlier" class="bar-seg seg-outlier" style="width:10%;"></div>
+      </div>
+      <div class="iqr-labels">
+        <span id="lblQ1">常態低標: $0</span>
+        <span id="lblMed">中位數: $0</span>
+        <span id="lblQ3">常態高標: $0</span>
+        <span id="lblAlert" style="color:var(--danger); font-weight:600;">異常預警線: $0</span>
+      </div>
+    </div>
+
+    <!-- 記帳表單 -->
+    <div class="card">
+      <form id="formExpense" onsubmit="saveExpense(event)">
+        <input type="hidden" id="editExpId">
+        <div class="grid-3">
+          <div class="form-group">
+            <label>金流類型</label>
+            <select id="expType" onchange="switchCategories()">
+              <option value="expense">支出 (-)</option>
+              <option value="income">收入 (+)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>交易金額 (TWD)</label>
+            <input type="number" id="expAmount" min="1" step="1" required placeholder="例如: 120">
+          </div>
+          <div class="form-group">
+            <label>發生日期</label>
+            <input type="date" id="expDate" required>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="form-group">
+            <label>分類維度</label>
+            <select id="expCategory" required onchange="renderExpenses()"></select>
+          </div>
+          <div class="form-group">
+            <label>細項說明</label>
+            <input type="text" id="expItem" required placeholder="如：演算法研習耗材、午餐便當">
+          </div>
+          <div class="form-group">
+            <label>支付管道</label>
+            <select id="expPayment">
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+              <option value="LINE Pay">LINE Pay</option>
+              <option value="街口支付">街口支付</option>
+              <option value="悠遊卡">悠遊卡</option>
+              <option value="銀行轉帳">銀行轉帳</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>備註紀錄 (選填)</label>
+          <input type="text" id="expNote" placeholder="輸入補充說明...">
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="btnSubmitExp">儲存交易紀錄</button>
+          <button type="button" class="btn btn-secondary hidden" id="btnCancelExp" onclick="resetExpForm()">取消</button>
+        </div>
+      </form>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="searchExp" placeholder="搜尋項目名稱..." style="font-size:0.8rem; padding:4px 8px; width:160px;" oninput="renderExpenses()">
+        <select id="filterCategory" style="font-size:0.8rem; padding:4px 8px;" onchange="renderExpenses()">
+          <option value="">全部分類</option>
+        </select>
+      </div>
+      <button class="btn-sm" onclick="exportCsvData()">匯出統計報表 (CSV)</button>
+    </div>
+    <div class="item-list" id="expenseList"></div>
+  </div>
+
+  <!-- 分頁 2: DAG 待辦與 DP 排程 -->
+  <div id="secTask" class="hidden">
+    <!-- 消融實驗面板 -->
+    <div class="card" style="background:#fdfdfe; border-color:#cbd5e1;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.85rem; font-weight:700; color:var(--text-main);">
+          運籌調度消融實驗評測儀 (Ablation Benchmark Suite)
+        </span>
+        <span style="font-size:0.72rem; color:var(--text-muted);">Baseline vs. Proposed Model</span>
+      </div>
+      <table class="benchmark-table">
+        <thead>
+          <tr>
+            <th>調度求解策略</th>
+            <th>相依約束處理</th>
+            <th>時間複雜度</th>
+            <th>空間複雜度</th>
+            <th>總權重效益</th>
+            <th>近似比 (Ratio)</th>
+            <th>運算延遲</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>DAG 拓撲檢定 (Kahn)</td>
+            <td>有向無環圖檢查</td>
+            <td>O(V + E)</td>
+            <td>O(V)</td>
+            <td id="resDagStatus">未檢驗</td>
+            <td>--</td>
+            <td id="resDagTime">--</td>
+          </tr>
+          <tr>
+            <td>相依閉包啟發式 (DP)</td>
+            <td>去重閉包聚合近似</td>
+            <td>O(N · W)</td>
+            <td>O(W)</td>
+            <td id="resDpUtility">--</td>
+            <td>1.000 (基準)</td>
+            <td id="resDpTime">--</td>
+          </tr>
+          <tr>
+            <td>動態相依貪婪 (Greedy)</td>
+            <td>動態密度排序近似</td>
+            <td>O(N log N)</td>
+            <td>O(1)</td>
+            <td id="resGreedyUtility">--</td>
+            <td id="resRatio">--</td>
+            <td id="resGreedyTime">--</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 參數設定與通知 -->
+    <div class="card grid-2">
+      <div class="form-group">
+        <label>Gmail 預設通知信箱</label>
+        <div style="display:flex; gap:6px;">
+          <input type="email" id="userEmail" placeholder="your_email@gmail.com">
+          <button class="btn-sm" onclick="saveUserEmail()">保存</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>單日可用工時上限 (小時容量 Capacity)</label>
+        <div style="display:flex; gap:6px;">
+          <input type="number" id="limitHours" min="0.5" max="24" step="0.5" value="6">
+          <button class="btn btn-action" onclick="runSchedulingAlgorithm()">執行拓撲求解</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任務輸入表單 -->
+    <div class="card">
+      <form id="formTask" onsubmit="saveTask(event)">
+        <input type="hidden" id="editTaskId">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>任務名稱</label>
+            <input type="text" id="taskTitle" required placeholder="如：撰寫演算法消融實驗數據章節">
+          </div>
+          <div class="form-group">
+            <label>預計耗時 (每 0.5h 為一單位)</label>
+            <input type="number" id="taskHours" min="0.5" max="24" step="0.5" value="1.5" required>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="form-group">
+            <label>效益權重 (Utility)</label>
+            <select id="taskPriority">
+              <option value="高">高 (權重值: 3)</option>
+              <option value="中" selected>中 (權重值: 2)</option>
+              <option value="低">低 (權重值: 1)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>前置相依任務 (Prerequisite)</label>
+            <select id="taskPreReq">
+              <option value="">無前置條件 (獨立任務)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>分類標籤</label>
+            <input type="text" id="taskTag" placeholder="專題 / 課程 / 競賽">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>截止日期時間</label>
+            <input type="datetime-local" id="taskDeadline">
+          </div>
+          <div class="form-group">
+            <label>任務細節備註</label>
+            <input type="text" id="taskDesc" placeholder="輸入具體執行說明...">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="btnSubmitTask">儲存任務配置</button>
+          <button type="button" class="btn btn-secondary hidden" id="btnCancelTask" onclick="resetTaskForm()">取消</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="item-list" id="taskList"></div>
+  </div>
+
+  <!-- 底部維護與驗證工具列 -->
+  <div style="margin-top:20px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; font-size:0.8rem;">
+    <div>
+      <button class="btn-sm" onclick="exportJsonFile()">備份資料庫 (JSON)</button>
+      <label class="btn-sm" style="cursor:pointer;">
+        還原備份
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJsonFile(event)">
+      </label>
+      <button class="btn-sm" style="background:#1e293b; color:#38bdf8; border-color:#334155; font-weight:600;" onclick="runTests()">執行演算法單元驗證套件</button>
+      <button class="btn-sm del" onclick="clearAllData()">重設資料庫</button>
+    </div>
+    <span style="color:var(--text-muted); font-size:0.75rem;">純前端架構 · IndexedDB 異步事務安全存取</span>
+  </div>
+
+  <!-- 學術級單元測試與實驗控制台 -->
+  <div id="testBox" class="test-box hidden">
+    <div class="test-console-head">
+      <div>=== ALGORITHM TEST SUITE & BENCHMARK REPORT ===</div>
+      <div class="test-status-pill">V8 JIT Active</div>
+    </div>
+    <div class="test-summary-grid">
+      <div class="test-sum-item">
+        <div class="lbl">TOTAL TESTS</div>
+        <div class="val" id="testTotalCount">4</div>
+      </div>
+      <div class="test-sum-item">
+        <div class="lbl">PASSED</div>
+        <div class="val" id="testPassCount" style="color:#4ade80;">4</div>
+      </div>
+      <div class="test-sum-item">
+        <div class="lbl">FAILED</div>
+        <div class="val" id="testFailCount" style="color:#f87171;">0</div>
+      </div>
+      <div class="test-sum-item">
+        <div class="lbl">SUITE LATENCY</div>
+        <div class="val" id="testSuiteLatency" style="color:#38bdf8;">--</div>
+      </div>
+    </div>
+    <div id="testLog" class="test-log-body"></div>
+  </div>
+</div>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
