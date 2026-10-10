@@ -1,0 +1,167 @@
+  <!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧生活與專案管理工作台</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="title-area">
+      <h2>智慧生活與專案管理工作台</h2>
+      <p>開發人：致理科技大學 商務科技應用系 林義晨<br>核心架構：DAG 拓撲相依閉包排程 · IDB 原生索引滾動窗口 IQR · 0/1 背包動態規劃消融實驗</p>
+      <div id="db-msg" class="db-status">系統資料庫：連線中...</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="btnTabExpense" onclick="changeTab('expense')">帳務記錄與索引滾動統計</button>
+    <button class="tab-btn" id="btnTabTask" onclick="changeTab('task')">DAG 相依閉包排程與 DP 求解</button>
+  </div>
+
+  <!-- 分頁 1: 帳務 -->
+  <div id="secExpense">
+    <div class="card grid-3">
+      <div class="stat-item"><div class="stat-label">總收入</div><div id="valIncome" class="stat-num" style="color:#38a169;">$0</div></div>
+      <div class="stat-item"><div class="stat-label">總支出</div><div id="valExpense" class="stat-num" style="color:#e53e3e;">$0</div></div>
+      <div class="stat-item"><div class="stat-label">淨收支結餘</div><div id="valBalance" class="stat-num">$0</div></div>
+    </div>
+
+    <div class="iqr-container">
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; font-weight:bold;">
+        <span>支出常態區間檢定 (IQR 模型)</span>
+        <div>
+          <label style="font-size:0.75rem; font-weight:normal;">統計窗口：</label>
+          <select id="selIqrMode" style="font-size:0.75rem; padding:2px;" onchange="renderExpenses()">
+            <option value="rolling">滾動 30 天自適應分層 (B-Tree 索引)</option>
+            <option value="stratified">歷史全期分層 (All-time Stratified)</option>
+            <option value="global">歷史全域分析 (Global)</option>
+          </select>
+        </div>
+      </div>
+      <div class="iqr-bar">
+        <div id="barQ1" class="bar-seg seg-q1" style="width:25%;"></div>
+        <div id="barMid" class="bar-seg seg-mid" style="width:50%;"></div>
+        <div id="barQ3" class="bar-seg seg-q3" style="width:15%;"></div>
+        <div id="barOutlier" class="bar-seg seg-outlier" style="width:10%;"></div>
+      </div>
+      <div class="iqr-labels">
+        <span id="lblQ1">常態低標: $0</span><span id="lblMed">中位數: $0</span>
+        <span id="lblQ3">常態高標: $0</span><span id="lblAlert" style="color:#e53e3e; font-weight:bold;">異常預警線: $0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <form id="formExpense" onsubmit="saveExpense(event)">
+        <input type="hidden" id="editExpId">
+        <div class="grid-3">
+          <div class="form-group"><label>類型</label><select id="expType" onchange="switchCategories()"><option value="expense">支出 (-)</option><option value="income">收入 (+)</option></select></div>
+          <div class="form-group"><label>金額 (TWD)</label><input type="number" id="expAmount" min="1" step="1" required placeholder="例如: 120"></div>
+          <div class="form-group"><label>日期</label><input type="date" id="expDate" required></div>
+        </div>
+        <div class="grid-3">
+          <div class="form-group"><label>分類</label><select id="expCategory" required onchange="renderExpenses()"></select></div>
+          <div class="form-group"><label>細項名稱</label><input type="text" id="expItem" required placeholder="如：午餐便當、專題耗材"></div>
+          <div class="form-group"><label>付款方式</label><select id="expPayment"><option value="現金">現金</option><option value="信用卡">信用卡</option><option value="LINE Pay">LINE Pay</option><option value="街口支付">街口支付</option><option value="悠遊卡">悠遊卡</option><option value="銀行轉帳">銀行轉帳</option></select></div>
+        </div>
+        <div class="form-group"><label>備註 (選填)</label><input type="text" id="expNote" placeholder="補充說明..."></div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="btnSubmitExp">儲存記錄</button>
+          <button type="button" class="btn btn-secondary hidden" id="btnCancelExp" onclick="resetExpForm()">取消</button>
+        </div>
+      </form>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+      <input type="text" id="searchExp" placeholder="搜尋項目..." style="font-size:0.8rem; padding:4px 8px;" oninput="renderExpenses()">
+      <select id="filterCategory" style="font-size:0.8rem;" onchange="renderExpenses()"><option value="">全部分類</option></select>
+      <button class="btn-sm" onclick="exportCsvData()">匯出 CSV</button>
+    </div>
+    <div class="item-list" id="expenseList"></div>
+  </div>
+
+  <!-- 分頁 2: DAG 待辦與 DP 排程 -->
+  <div id="secTask" class="hidden">
+    <div class="card" style="background:#fafafa;">
+      <div style="font-size:0.85rem; font-weight:bold; color:#2d3748; margin-bottom:4px;">
+        圖論相依與運籌消融實驗 (DAG 拓撲檢定 + 相依閉包啟發式 DP vs. Greedy)
+      </div>
+      <table class="benchmark-table">
+        <thead>
+          <tr>
+            <th>求解策略</th><th>相依約束支援</th><th>時間複雜度</th><th>空間複雜度</th>
+            <th>總權重效益</th><th>近似比</th><th>運算耗時</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>DAG 拓撲排序 (Kahn)</td><td>有向無環圖檢查</td><td>O(V + E)</td><td>O(V)</td><td id="resDagStatus">未檢測</td><td>--</td><td id="resDagTime">--</td></tr>
+          <tr><td>相依閉包啟發式 (DP)</td><td>去重閉包聚合近似</td><td>O(N · W)</td><td>O(W)</td><td id="resDpUtility">--</td><td>基準 (啟發式)</td><td id="resDpTime">--</td></tr>
+          <tr><td>動態相依貪婪 (Greedy)</td><td>動態密度排序近似</td><td>O(N log N)</td><td>O(1)</td><td id="resGreedyUtility">--</td><td id="resRatio">--</td><td id="resGreedyTime">--</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card grid-2">
+      <div class="form-group">
+        <label>Gmail 預設通知信箱</label>
+        <div style="display:flex; gap:6px;">
+          <input type="email" id="userEmail" placeholder="your_email@gmail.com">
+          <button class="btn-sm" onclick="saveUserEmail()">儲存</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>今日可用工時上限 (小時)</label>
+        <div style="display:flex; gap:6px;">
+          <input type="number" id="limitHours" min="0.5" max="24" step="0.5" value="6">
+          <button class="btn btn-action" onclick="runSchedulingAlgorithm()">執行拓撲檢定與排程求解</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <form id="formTask" onsubmit="saveTask(event)">
+        <input type="hidden" id="editTaskId">
+        <div class="grid-2">
+          <div class="form-group"><label>事項標題</label><input type="text" id="taskTitle" required placeholder="如：演算法作業、專題書面報告"></div>
+          <div class="form-group"><label>預計耗時 (小時，每 0.5h 一單位)</label><input type="number" id="taskHours" min="0.5" max="24" step="0.5" value="1.5" required></div>
+        </div>
+        <div class="grid-3">
+          <div class="form-group"><label>優先權重 (效益 Utility)</label><select id="taskPriority"><option value="高">高 (權重: 3)</option><option value="中" selected>中 (權重: 2)</option><option value="低">低 (權重: 1)</option></select></div>
+          <div class="form-group"><label>前置相依任務 (Prerequisite)</label><select id="taskPreReq"><option value="">無前置條件 (獨立任務)</option></select></div>
+          <div class="form-group"><label>分類標籤</label><input type="text" id="taskTag" placeholder="專題 / 課程 / 個人"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label>截止日期時間</label><input type="datetime-local" id="taskDeadline"></div>
+          <div class="form-group"><label>詳細說明</label><input type="text" id="taskDesc" placeholder="備註或執行細節..."></div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="btnSubmitTask">儲存事項</button>
+          <button type="button" class="btn btn-secondary hidden" id="btnCancelTask" onclick="resetTaskForm()">取消</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="item-list" id="taskList"></div>
+  </div>
+
+  <div style="margin-top:20px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; font-size:0.8rem;">
+    <div>
+      <button class="btn-sm" onclick="exportJsonFile()">匯出備份 (JSON)</button>
+      <label class="btn-sm" style="cursor:pointer;">匯入備份<input type="file" id="importFile" accept=".json" style="display:none" onchange="importJsonFile(event)"></label>
+      <button class="btn-sm" onclick="runTests()">執行演算法單元測試</button>
+      <button class="btn-sm del" onclick="clearAllData()">清空資料庫</button>
+    </div>
+    <span style="color:#718096;">資料儲存：IndexedDB 本機安全儲存</span>
+  </div>
+
+  <div id="testBox" class="test-box hidden">
+    <div>=== 演算法單元驗證結果 ===</div>
+    <div id="testLog" style="margin-top:5px; white-space:pre-wrap;"></div>
+  </div>
+</div>
+<script src="core.js"></script>
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
